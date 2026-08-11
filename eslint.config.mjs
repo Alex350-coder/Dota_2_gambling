@@ -7,6 +7,7 @@ import noFloatMoney from "./tooling/eslint-rules/no-float-money.cjs";
 import noRawSqlConcat from "./tooling/eslint-rules/no-raw-sql-concat.cjs";
 import requireAuthz from "./tooling/eslint-rules/require-authz.cjs";
 import domainPurity from "./tooling/eslint-rules/domain-purity.cjs";
+import noConsole from "./tooling/eslint-rules/no-console.cjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,6 +22,7 @@ const projectRulesPlugin = {
     "no-raw-sql-concat": noRawSqlConcat,
     "require-authz": requireAuthz,
     "domain-purity": domainPurity,
+    "no-console": noConsole,
   },
 };
 
@@ -50,7 +52,7 @@ const eslintConfig = tseslint.config(
       project: projectRulesPlugin,
     },
     rules: {
-      "no-console": "error",
+      "project/no-console": "error",
       "max-lines": ["error", { max: 800, skipBlankLines: true, skipComments: true }],
       complexity: ["error", 15],
       "project/no-float-money": "error",
@@ -66,8 +68,11 @@ const eslintConfig = tseslint.config(
         projectService: false,
       },
     },
+    plugins: {
+      project: projectRulesPlugin,
+    },
     rules: {
-      "no-console": "error",
+      "project/no-console": "error",
     },
   },
   eslintConfigPrettier,

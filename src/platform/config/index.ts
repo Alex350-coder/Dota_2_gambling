@@ -44,7 +44,7 @@ export function loadConfig(): Config {
     return cachedConfig;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    // eslint-disable-next-line no-console -- boot-failure diagnostics, not runtime logging
+    // eslint-disable-next-line project/no-console -- boot-failure diagnostics before logger/config exist
     console.error(`[config] ${message}`);
     process.exit(1);
   }
