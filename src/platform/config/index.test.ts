@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ConfigError, loadConfig, parseConfig } from "./index";
+import { ConfigError, parseConfig } from "./index";
 
 const validEnv = {
   APP_URL: "http://localhost:3000",
@@ -53,16 +53,16 @@ describe("parseConfig", () => {
 });
 
 describe("loadConfig", () => {
-  const originalEnv = { ...process.env };
-
   afterEach(() => {
-    process.env = { ...originalEnv };
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
     vi.resetModules();
   });
 
   it("parses process.env and caches the result across calls", async () => {
-    process.env = { ...validEnv };
+    for (const [key, value] of Object.entries(validEnv)) {
+      vi.stubEnv(key, value);
+    }
     vi.resetModules();
     const fresh = await import("./index");
 
@@ -73,12 +73,14 @@ describe("loadConfig", () => {
     expect(second).toBe(first);
   });
 
-  it("logs and exits non-zero when process.env is invalid", () => {
-    process.env = {};
+  it("logs and exits non-zero when process.env is invalid", async () => {
+    vi.stubEnv("METRICS_TOKEN", "");
+    vi.resetModules();
+    const fresh = await import("./index");
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    loadConfig();
+    fresh.loadConfig();
 
     expect(exitSpy).toHaveBeenCalledWith(1);
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("[config]"));
