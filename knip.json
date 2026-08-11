@@ -1,0 +1,6 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": ["tooling/__fixtures__/**"],
+  "ignoreDependencies": ["eslint-config-next", "lint-staged"],
+  "ignoreBinaries": ["reconcile"]
+}
