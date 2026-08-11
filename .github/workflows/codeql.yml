@@ -1,0 +1,47 @@
+# Installed from Claude/ci/workflows/codeql.yml by task T-005.
+# Actions are pinned to full commit SHAs (RULE-E12, MET-SEC-07).
+
+name: codeql
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '41 5 * * 1' # weekly, so new queries reach existing code
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # required to upload SARIF results
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3.37.6
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+      - name: Analyze
+        uses: github/codeql-action/analyze@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3.37.6
+        with:
+          category: /language:${{ matrix.language }}
+      # Any Critical or High alert blocks the merge (MET-SEC-01 / MET-SEC-02 = 0).
+      # Triage happens in the Security tab; a dismissal requires a written rationale
+      # recorded in Claude/Audit.md §3.

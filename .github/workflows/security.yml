@@ -1,0 +1,92 @@
+# Installed from Claude/ci/workflows/security.yml by task T-005.
+# Actions are pinned to full commit SHAs (RULE-E12, MET-SEC-07).
+
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 4 * * 1' # weekly, Monday 04:17 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: secret-scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0 # full history so a secret added in an earlier commit is caught
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
+      # Any finding fails the job. MET-SEC-05 = 0.
+
+  dependency-audit:
+    name: dependency-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Blocking: Critical/High in production dependencies (MET-SEC-03 = 0)
+      - run: pnpm audit --prod --audit-level high
+      # Warning-only: Moderate findings are reported, not blocking (MET-SEC-04)
+      - name: Moderate advisories (informational)
+        continue-on-error: true
+        run: pnpm audit --audit-level moderate
+
+  workflow-lint:
+    name: workflow-lint (actionlint + zizmor)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: actionlint
+        uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
+      - name: zizmor (workflow security audit)
+        run: |
+          pipx install zizmor
+          zizmor --min-severity medium .github/workflows/
+      # Catches unpinned actions, over-broad permissions, template injection,
+      # pull_request_target misuse. MET-SEC-07 = 0.
+
+  policy-claims:
+    name: policy-claims
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # Forbidden claims (Claude/compliance/POLICIES.md §4): the project must never present
+      # itself as licensed, regulated, risk-free or profit-guaranteeing.
+      - name: Forbidden claims check
+        run: ./scripts/check-forbidden-claims.sh
+
+  markers:
+    name: uncertainty-markers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # Informational counts for LEGAL VALIDATION REQUIRED / EXTERNAL VALIDATION REQUIRED /
+      # POST-MVP across Claude/**, plus a BLOCKING check that no `DECISION REQUIRED`
+      # marker exists inside src/** (MET-DOC-03).
+      - run: ./scripts/report-markers.sh

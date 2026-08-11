@@ -1,0 +1,31 @@
+# Installed from Claude/ci/workflows/dependency-review.yml by task T-005.
+# Actions are pinned to full commit SHAs (RULE-E12, MET-SEC-07).
+
+name: dependency-review
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: dependency-review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # comment the summary on the PR
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          # Blocks any PR introducing a dependency with a High or Critical advisory.
+          fail-on-severity: high
+          # Licence policy: copyleft licences require an explicit decision, because the
+          # project's own licence is still open (Claude/Tasks.md T-1012, DECISION REQUIRED).
+          deny-licenses: AGPL-3.0, AGPL-3.0-only, AGPL-3.0-or-later, SSPL-1.0
+          comment-summary-in-pr: on-failure
+          fail-on-scopes: runtime, development
