@@ -53,8 +53,8 @@ const eslintConfig = tseslint.config(
     },
     rules: {
       "project/no-console": "error",
-      "max-lines": ["error", { max: 800, skipBlankLines: true, skipComments: true }],
-      complexity: ["error", 15],
+      "max-lines": ["error", { max: 400, skipBlankLines: true, skipComments: true }],
+      complexity: ["error", 12],
       "project/no-float-money": "error",
       "project/no-raw-sql-concat": "error",
       "project/require-authz": "error",
