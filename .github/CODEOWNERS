@@ -1,0 +1,42 @@
+# .github/CODEOWNERS
+#
+# Note: with a single maintainer, CODEOWNERS documents responsibility and routes review
+# requests; required approvals are set to 0 until a second maintainer exists
+# (CI_CD.md §6, DECISION REQUIRED).
+
+# Default owner for everything
+*                           @Alex350-coder
+
+# Planning and normative documentation — changes here change the rules of the project
+/Claude/                    @Alex350-coder
+/Claude/Rules.md            @Alex350-coder
+/Claude/Metrics.md          @Alex350-coder
+/Claude/adr/                @Alex350-coder
+
+# Financial core — the highest-risk code in the repository
+/src/domain/                @Alex350-coder
+/src/application/betting/   @Alex350-coder
+/src/application/settlement/ @Alex350-coder
+/src/application/wallet/    @Alex350-coder
+/src/infra/db/ledger.ts     @Alex350-coder
+
+# Database schema and migrations — irreversible in production
+/db/                        @Alex350-coder
+
+# Security-sensitive platform code
+/src/platform/session/      @Alex350-coder
+/src/platform/authz/        @Alex350-coder
+/src/platform/csrf/         @Alex350-coder
+/src/platform/headers/      @Alex350-coder
+
+# CI, supply chain and repository configuration
+/.github/                   @Alex350-coder
+/tooling/                   @Alex350-coder
+/scripts/                   @Alex350-coder
+package.json                @Alex350-coder
+pnpm-lock.yaml               @Alex350-coder
+
+# Legal and compliance surface
+/src/app/(public)/legal/    @Alex350-coder
+SECURITY.md                 @Alex350-coder
+LICENSE                     @Alex350-coder

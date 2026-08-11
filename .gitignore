@@ -1,47 +1,90 @@
+# Installed from Claude/ci/templates/.gitignore by task T-006, merged with the
+# Next.js-generated defaults from T-002.
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# --- Secrets and local configuration -------------------------------------
+# .env.example is the ONLY environment file that may be committed.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+secrets/
+credentials.json
+service-account*.json
+production-readiness.json
+
+# --- Data that must never be committed -----------------------------------
+*.sql.gz
+*.dump
+*.bak
+db/dumps/
+backups/
+exports/
+reconcile-report*.json
+
+# --- Dependencies and build output ---------------------------------------
 /node_modules
 /.pnp
 .pnp.*
+.pnpm-store/
+/.next/
+/out/
+/build
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# --- Yarn (unused, but ignored defensively) -------------------------------
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
 
-# testing
+# --- Test, coverage and tooling artefacts --------------------------------
 /coverage
+coverage-parts/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+reports/
+stryker.log
+.stryker-tmp/
+.vitest/
+.eslintcache
 
-# next.js
-/.next/
-/out/
+# --- Local infrastructure -------------------------------------------------
+pgdata/
+docker-compose.override.yml
 
-# production
-/build
-
-# misc
+# --- Editor and OS --------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.recommended.json
+.idea/
+*.swp
 .DS_Store
-*.pem
+Thumbs.db
+desktop.ini
 
-# debug
+# --- Logs -----------------------------------------------------------------
+*.log
+logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
+# --- Vercel -----------------------------------------------------------------
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# local scratch / soft-deletes (never committed)
+# --- local scratch / soft-deletes (never committed) -----------------------
 /delete_files/
 
-# local agent-harness bookkeeping (not project source)
+# --- local agent-harness bookkeeping (not project source) -----------------
 /.claude/

@@ -1,0 +1,44 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Lima
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: [dependencies]
+    groups:
+      # Grouped so a week of patch noise is one reviewable PR, while the packages whose
+      # upgrades can change financial or security behaviour stay individually reviewable.
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      production-patch:
+        dependency-type: production
+        update-types: [patch]
+    ignore:
+      # Majors of these are handled deliberately, with a reconciliation run afterwards
+      # (DevelopmentWorkflow.md §9) — never as an automatic PR.
+      - dependency-name: next
+        update-types: [version-update:semver-major]
+      - dependency-name: drizzle-orm
+        update-types: [version-update:semver-major]
+      - dependency-name: pg
+        update-types: [version-update:semver-major]
+      - dependency-name: '@node-rs/argon2'
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    labels: [dependencies, ci]
+    # Keeps SHA pins current; the workflow-lint job still enforces that pins are full SHAs.
