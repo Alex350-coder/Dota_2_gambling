@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { ConfigError, parseConfig } from "./index";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ConfigError, loadConfig, parseConfig } from "./index";
 
 const validEnv = {
   APP_URL: "http://localhost:3000",
@@ -49,5 +49,38 @@ describe("parseConfig", () => {
     expect(() =>
       parseConfig({ ...validEnv, RG_DEFAULT_DAILY_STAKE_LIMIT_MINOR: "not-a-number" }),
     ).toThrow(ConfigError);
+  });
+});
+
+describe("loadConfig", () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it("parses process.env and caches the result across calls", async () => {
+    process.env = { ...validEnv };
+    vi.resetModules();
+    const fresh = await import("./index");
+
+    const first = fresh.loadConfig();
+    const second = fresh.loadConfig();
+
+    expect(first.MONEY_MODE).toBe("SIMULATED");
+    expect(second).toBe(first);
+  });
+
+  it("logs and exits non-zero when process.env is invalid", () => {
+    process.env = {};
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    loadConfig();
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("[config]"));
   });
 });

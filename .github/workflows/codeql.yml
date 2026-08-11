@@ -8,7 +8,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '41 5 * * 1' # weekly, so new queries reach existing code
+    - cron: "41 5 * * 1" # weekly, so new queries reach existing code
 
 permissions:
   contents: read

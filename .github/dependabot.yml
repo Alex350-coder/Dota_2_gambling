@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-      time: '06:00'
+      time: "06:00"
       timezone: America/Lima
     open-pull-requests-limit: 5
     versioning-strategy: increase
@@ -31,7 +31,7 @@ updates:
         update-types: [version-update:semver-major]
       - dependency-name: pg
         update-types: [version-update:semver-major]
-      - dependency-name: '@node-rs/argon2'
+      - dependency-name: "@node-rs/argon2"
         update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions

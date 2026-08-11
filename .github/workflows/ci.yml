@@ -17,12 +17,12 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '22'
+  NODE_VERSION: "22"
   MONEY_MODE: SIMULATED
   # Ephemeral service-container credentials. Not a secret: the database exists only inside the
   # runner for the duration of the job and is unreachable from outside it.
   PGHOST: localhost
-  PGPORT: '5432'
+  PGPORT: "5432"
   PGUSER: postgres
   PGPASSWORD: ci_local_only
   PGDATABASE: betting_ci
@@ -77,7 +77,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: ci_local_only
           POSTGRES_DB: betting_ci
-        ports: ['5432:5432']
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 5s --health-retries 10
@@ -107,7 +107,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: ci_local_only
           POSTGRES_DB: betting_ci
-        ports: ['5432:5432']
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 5s --health-retries 10
@@ -138,7 +138,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: ci_local_only
           POSTGRES_DB: betting_ci
-        ports: ['5432:5432']
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 5s --health-retries 10
@@ -166,7 +166,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: ci_local_only
           POSTGRES_DB: betting_ci
-        ports: ['5432:5432']
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 5s --health-retries 10
@@ -194,7 +194,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: ci_local_only
           POSTGRES_DB: betting_ci
-        ports: ['5432:5432']
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 5s --health-retries 10

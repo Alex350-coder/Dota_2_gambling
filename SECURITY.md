@@ -23,12 +23,12 @@ steps or a proof of concept, the impact you believe it has, and any suggested re
 
 ### What to expect
 
-| Stage | Target |
-| --- | --- |
-| Acknowledgement | within 3 business days |
-| Initial assessment and severity | within 7 business days |
-| Fix for Critical/High | prioritised over all other work |
-| Public disclosure | coordinated with the reporter, after a fix is available |
+| Stage                           | Target                                                  |
+| ------------------------------- | ------------------------------------------------------- |
+| Acknowledgement                 | within 3 business days                                  |
+| Initial assessment and severity | within 7 business days                                  |
+| Fix for Critical/High           | prioritised over all other work                         |
+| Public disclosure               | coordinated with the reporter, after a fix is available |
 
 Credit is given in the release notes unless anonymity is requested. There is no bug bounty.
 
