@@ -15,10 +15,24 @@ function toBpsBigInt(bps: number): bigint {
   return BigInt(bps);
 }
 
+/**
+ * floor(amount * numerator / denominator). The general integer-ratio scale
+ * used to express odds (e.g. 18/10 = 1.8x) without floating point.
+ */
+export function scaleByRatio(amount: Minor, numerator: number, denominator: number): Minor {
+  if (!Number.isInteger(numerator) || numerator < 0) {
+    throw new RangeError("numerator must be a non-negative integer");
+  }
+  if (!Number.isInteger(denominator) || denominator <= 0) {
+    throw new RangeError("denominator must be a positive integer");
+  }
+  return toMinor((amount * BigInt(numerator)) / BigInt(denominator));
+}
+
 /** floor(amount * bps / 10_000), per BETTING_ENGINE.md rounding rule. */
 export function mulBps(amount: Minor, bps: number): Minor {
   const bpsValue = toBpsBigInt(bps);
-  return toMinor((amount * bpsValue) / BPS_DENOMINATOR);
+  return scaleByRatio(amount, Number(bpsValue), Number(BPS_DENOMINATOR));
 }
 
 export interface SplitFloorResult {

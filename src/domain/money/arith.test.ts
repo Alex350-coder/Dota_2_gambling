@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { add, mulBps, splitFloor, sub } from "./arith";
+import { add, mulBps, scaleByRatio, splitFloor, sub } from "./arith";
 import { toMinor } from "./types";
 
 describe("add", () => {
@@ -80,6 +80,27 @@ describe("splitFloor", () => {
 
     expect(part).toBe(500n);
     expect(remainder).toBe(0n);
+  });
+});
+
+describe("scaleByRatio", () => {
+  it("computes floor(amount * numerator / denominator)", () => {
+    // 1.8x odds on 100 -> floor(100*18/10) = 180
+    expect(scaleByRatio(toMinor(100n), 18, 10)).toBe(180n);
+  });
+
+  it("floors instead of rounding", () => {
+    // 33 * 18 / 10 = 59.4 -> floors to 59
+    expect(scaleByRatio(toMinor(33n), 18, 10)).toBe(59n);
+  });
+
+  it("throws for a zero or negative denominator", () => {
+    expect(() => scaleByRatio(toMinor(100n), 18, 0)).toThrow(RangeError);
+    expect(() => scaleByRatio(toMinor(100n), 18, -1)).toThrow(RangeError);
+  });
+
+  it("throws for a negative numerator", () => {
+    expect(() => scaleByRatio(toMinor(100n), -1, 10)).toThrow(RangeError);
   });
 });
 
