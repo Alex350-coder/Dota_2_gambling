@@ -1,18 +1,15 @@
+import type { MarketStatus } from "../catalog/market-state";
 import { DomainError } from "../errors";
-import type { BetOrderStatus } from "./order";
 import type { Minor } from "../money/types";
+import type { BetOrderStatus } from "./order";
 
 export type BetOrderActor = "USER" | "ADMIN" | "SYSTEM";
-
-/** Market statuses relevant to a BetOrder cancellation guard. See StateManagement.md §2/§3. */
-export type RelevantMarketStatus =
-  "DRAFT" | "OPEN" | "SUSPENDED" | "CLOSED" | "SETTLING" | "SETTLED" | "CANCELLED" | "VOID";
 
 export interface BetOrderTransitionContext {
   readonly actor: BetOrderActor;
   readonly matchedMinor?: Minor;
   readonly unmatchedMinor?: Minor;
-  readonly marketStatus?: RelevantMarketStatus;
+  readonly marketStatus?: MarketStatus;
 }
 
 type TransitionGuard = (ctx: BetOrderTransitionContext) => boolean;
