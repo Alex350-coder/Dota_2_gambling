@@ -14,6 +14,9 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Migration test files (tests/db/**) share one Postgres DB and each resets the
+    // schema in beforeAll; running files in parallel races on DROP SCHEMA/CREATE SCHEMA.
+    fileParallelism: false,
     include: [
       "src/**/*.test.{ts,tsx}",
       "tooling/**/*.test.{ts,mjs,cjs}",
