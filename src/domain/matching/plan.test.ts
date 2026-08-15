@@ -107,6 +107,29 @@ describe("planFifoAllocations", () => {
     ]);
   });
 
+  it("skips a resting order with zero unmatched without producing an allocation", () => {
+    const result = planFifoAllocations({
+      marketId: "market-1",
+      incomingOrderId: "incoming-1",
+      incomingUnmatchedMinor: toMinor(5_000n),
+      incomingOddsNum: ODDS.num,
+      incomingOddsDen: ODDS.den,
+      commissionBps: 2_000,
+      restingOrders: [
+        resting({ orderId: "resting-1", unmatchedMinor: toMinor(0n) }),
+        resting({ orderId: "resting-2", unmatchedMinor: toMinor(5_000n) }),
+      ],
+    });
+
+    expect(result.allocations.map((a) => [a.orderBId, a.amountMinor])).toEqual([
+      ["resting-2", 5_000n],
+    ]);
+    expect(result.restingRemaining).toEqual([
+      { orderId: "resting-1", unmatchedMinor: 0n },
+      { orderId: "resting-2", unmatchedMinor: 0n },
+    ]);
+  });
+
   it("produces no allocations when there are no resting orders", () => {
     const result = planFifoAllocations({
       marketId: "market-1",

@@ -68,9 +68,15 @@ describe("createBetOrder", () => {
     }).toThrow(/requestedMinor/);
   });
 
-  it("throws for a non-positive odds ratio", () => {
+  it("throws for a non-positive odds numerator", () => {
     expect(() => {
       createBetOrder({ ...baseInput(), oddsNum: 0 });
+    }).toThrow(RangeError);
+  });
+
+  it("throws for a non-positive odds denominator", () => {
+    expect(() => {
+      createBetOrder({ ...baseInput(), oddsDen: 0 });
     }).toThrow(RangeError);
   });
 

@@ -34,6 +34,12 @@ describe("isSelfFunding", () => {
 
     expect(result).toBe(true);
   });
+
+  it("throws a RangeError for a non-positive odds denominator", () => {
+    expect(() => {
+      isSelfFunding(toMinor(100n), { num: 18, den: 0 }, toMinor(100n), MVP_ODDS);
+    }).toThrow(RangeError);
+  });
 });
 
 describe("assertSelfFunding", () => {

@@ -143,5 +143,19 @@ describe("assertTransition* helpers", () => {
     expect(() => {
       assertTransitionMatchAllocation("ACTIVE", "SETTLED", { actor: "SYSTEM" });
     }).not.toThrow();
+
+    expect(() => {
+      assertTransitionMarketResult("PENDING", "PROPOSED", {
+        proposerId: "u1",
+        confirmerId: undefined,
+      });
+    }).not.toThrow();
+
+    expect(() => {
+      assertTransitionSettlementRun("IN_PROGRESS", "FAILED", {
+        marketEscrowMinor: toMinor(500n),
+        hasExistingCompletedRun: false,
+      });
+    }).not.toThrow();
   });
 });
