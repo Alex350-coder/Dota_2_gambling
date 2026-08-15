@@ -3,3 +3,4 @@
 // definitions of its own.
 export * from "./identity";
 export * from "./wallet";
+export * from "./ledger";
