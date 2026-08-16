@@ -26,6 +26,7 @@
     "test:invariants": "vitest run tests/invariants",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
+    "db:audit-grants": "tsx scripts/audit-grants.ts",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm test && pnpm build",
     "verify:full": "pnpm verify && pnpm test:e2e",
     "prepare": "husky"
@@ -59,6 +60,7 @@
     "lint-staged": "^17.3.0",
     "prettier": "^3.9.6",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5",
     "typescript-eslint": "^8.67.0",
     "vitest": "^4.1.10",
