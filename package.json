@@ -27,6 +27,7 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:audit-grants": "tsx scripts/audit-grants.ts",
+    "reconcile": "tsx scripts/reconcile.ts",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm test && pnpm build",
     "verify:full": "pnpm verify && pnpm test:e2e",
     "prepare": "husky"
