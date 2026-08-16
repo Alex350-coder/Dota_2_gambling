@@ -5,3 +5,4 @@ export * from "./identity";
 export * from "./wallet";
 export * from "./ledger";
 export * from "./catalog";
+export * from "./betting";
