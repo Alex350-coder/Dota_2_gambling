@@ -29,6 +29,7 @@
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:check-drift": "tsx scripts/check-schema-drift.ts",
     "db:audit-grants": "tsx scripts/audit-grants.ts",
+    "db:seed": "tsx db/seed/dev.ts",
     "reconcile": "tsx scripts/reconcile.ts",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm test && pnpm build",
     "verify:full": "pnpm verify && pnpm test:e2e",
