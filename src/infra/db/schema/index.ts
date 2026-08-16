@@ -7,3 +7,4 @@ export * from "./ledger";
 export * from "./catalog";
 export * from "./betting";
 export * from "./settlement";
+export * from "./platform";
