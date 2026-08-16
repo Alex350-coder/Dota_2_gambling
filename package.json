@@ -26,6 +26,8 @@
     "test:invariants": "vitest run tests/invariants",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/db-migrate.ts",
+    "db:check-drift": "tsx scripts/check-schema-drift.ts",
     "db:audit-grants": "tsx scripts/audit-grants.ts",
     "reconcile": "tsx scripts/reconcile.ts",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm test && pnpm build",
