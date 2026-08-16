@@ -3,6 +3,7 @@ export type { IdGenerator } from "./id-generator";
 export type { UnitOfWork, UnitOfWorkOptions, IsolationLevel, RetryOptions } from "./unit-of-work";
 export type { Repository } from "./repository";
 export type { BetOrderRepository } from "./bet-order-repository";
+export type { LedgerWriter, LedgerPostInput, LedgerPostEntry } from "./ledger-writer";
 export type { EconomicModel } from "./economic-model";
 export type { PaymentProvider, PaymentReference } from "./payment-provider";
 export type {
