@@ -58,6 +58,34 @@ describe("canTransitionMarketResult", () => {
     ).toBe(true);
   });
 
+  it("allows PENDING -> VOID_PROPOSED", () => {
+    expect(
+      canTransitionMarketResult("PENDING", "VOID_PROPOSED", {
+        proposerId: "u1",
+        confirmerId: undefined,
+      }),
+    ).toBe(true);
+  });
+
+  it("allows VOID_PROPOSED -> CONFIRMED when confirmer differs from proposer (RULE-E13)", () => {
+    const ctx = { proposerId: "u1", confirmerId: "u2", hasExistingConfirmedResult: false };
+    expect(canTransitionMarketResult("VOID_PROPOSED", "CONFIRMED", ctx)).toBe(true);
+  });
+
+  it("rejects VOID_PROPOSED -> CONFIRMED when confirmer equals proposer", () => {
+    const ctx = { proposerId: "u1", confirmerId: "u1", hasExistingConfirmedResult: false };
+    expect(canTransitionMarketResult("VOID_PROPOSED", "CONFIRMED", ctx)).toBe(false);
+  });
+
+  it("allows VOID_PROPOSED -> DISPUTED", () => {
+    expect(
+      canTransitionMarketResult("VOID_PROPOSED", "DISPUTED", {
+        proposerId: "u1",
+        confirmerId: undefined,
+      }),
+    ).toBe(true);
+  });
+
   it("allows CONFIRMED -> SUPERSEDED", () => {
     expect(
       canTransitionMarketResult("CONFIRMED", "SUPERSEDED", {

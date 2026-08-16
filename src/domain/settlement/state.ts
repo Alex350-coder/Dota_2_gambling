@@ -50,7 +50,8 @@ export function assertTransitionMatchAllocation(
 
 // --- MarketResult (StateManagement.md §5) ------------------------------------
 
-export type MarketResultStatus = "PENDING" | "PROPOSED" | "CONFIRMED" | "DISPUTED" | "SUPERSEDED";
+export type MarketResultStatus =
+  "PENDING" | "PROPOSED" | "CONFIRMED" | "DISPUTED" | "SUPERSEDED" | "VOID_PROPOSED";
 
 export interface MarketResultTransitionContext {
   readonly proposerId: string;
@@ -68,8 +69,11 @@ function canConfirmResult(ctx: MarketResultTransitionContext): boolean {
 
 const MARKET_RESULT_RULES: readonly Rule<MarketResultStatus, MarketResultTransitionContext>[] = [
   { from: "PENDING", to: "PROPOSED", guard: () => true },
+  { from: "PENDING", to: "VOID_PROPOSED", guard: () => true },
   { from: "PROPOSED", to: "CONFIRMED", guard: canConfirmResult },
   { from: "PROPOSED", to: "DISPUTED", guard: () => true },
+  { from: "VOID_PROPOSED", to: "CONFIRMED", guard: canConfirmResult },
+  { from: "VOID_PROPOSED", to: "DISPUTED", guard: () => true },
   { from: "CONFIRMED", to: "SUPERSEDED", guard: () => true },
 ];
 
