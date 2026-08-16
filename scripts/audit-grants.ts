@@ -1,9 +1,9 @@
 import { createDb, createPool } from "@/infra/db/client";
 import { findForbiddenLedgerGrants } from "@/infra/db/grant-audit";
-import { loadConfig } from "@/platform/config";
+import { loadToolingConfig } from "@/platform/config";
 
 async function main(): Promise<void> {
-  const config = loadConfig();
+  const config = loadToolingConfig();
   const pool = createPool(config);
   createDb(pool);
 

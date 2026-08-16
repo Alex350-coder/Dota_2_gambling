@@ -1,6 +1,6 @@
 import { createPool } from "@/infra/db/client";
 import { findSchemaDrift } from "@/infra/db/schema-drift";
-import { loadConfig } from "@/platform/config";
+import { loadToolingConfig } from "@/platform/config";
 
 /**
  * Assumes the target database has already been migrated (CI's `database` job runs
@@ -8,7 +8,7 @@ import { loadConfig } from "@/platform/config";
  * disagreeing with what `db/migrations/**` actually produced (MET-CI-03).
  */
 async function main(): Promise<void> {
-  const config = loadConfig();
+  const config = loadToolingConfig();
   const pool = createPool(config);
 
   try {

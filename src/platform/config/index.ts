@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { envSchema, type Config } from "./schema";
+import { envSchema, toolingEnvSchema, type Config, type ToolingConfig } from "./schema";
 
-export type { Config } from "./schema";
+export type { Config, ToolingConfig } from "./schema";
 
 export class ConfigError extends Error {
   constructor(message: string) {
@@ -48,4 +48,26 @@ export function loadConfig(): Config {
     console.error(`[config] ${message}`);
     process.exit(1);
   }
+}
+
+let cachedToolingConfig: ToolingConfig | undefined;
+
+/**
+ * Boot-time entry point for DB/ops CLI scripts (db:migrate, db:check-drift, db:seed,
+ * db:audit-grants, reconcile) — validates only the database pool + MONEY_MODE fields,
+ * not the full application config. See ToolingConfig in ./schema for why.
+ */
+export function loadToolingConfig(): ToolingConfig {
+  if (cachedToolingConfig) {
+    return cachedToolingConfig;
+  }
+  const result = toolingEnvSchema.safeParse(process.env);
+  if (!result.success) {
+    const message = `Invalid environment configuration:\n${formatIssues(result.error)}`;
+    // eslint-disable-next-line project/no-console -- boot-failure diagnostics before logger/config exist
+    console.error(`[config] ${message}`);
+    process.exit(1);
+  }
+  cachedToolingConfig = result.data;
+  return cachedToolingConfig;
 }

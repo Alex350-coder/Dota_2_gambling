@@ -1,10 +1,10 @@
 import path from "node:path";
 import { createPool } from "@/infra/db/client";
 import { runMigrations } from "@/infra/db/migrate";
-import { loadConfig } from "@/platform/config";
+import { loadToolingConfig } from "@/platform/config";
 
 async function main(): Promise<void> {
-  const config = loadConfig();
+  const config = loadToolingConfig();
   const pool = createPool(config);
   const migrationsDir = path.resolve(process.cwd(), "db/migrations");
 

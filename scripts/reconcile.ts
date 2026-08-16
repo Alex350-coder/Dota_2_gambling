@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { createPool } from "@/infra/db/client";
 import { runAllReconcileChecks } from "@/infra/db/reconcile-queries";
-import { loadConfig } from "@/platform/config";
+import { loadToolingConfig } from "@/platform/config";
 
 interface ReconcileReport {
   readonly generatedAt: string;
@@ -16,7 +16,7 @@ function parseReportPath(argv: readonly string[]): string | undefined {
 }
 
 async function main(): Promise<void> {
-  const config = loadConfig();
+  const config = loadToolingConfig();
   const pool = createPool(config);
 
   try {

@@ -6,7 +6,7 @@ import { LedgerService } from "@/infra/db/ledger";
 import { CryptoIdGenerator } from "@/infra/id-generator";
 import { SystemClock } from "@/infra/clock";
 import { MVP_ECONOMIC_PROFILE } from "@/domain/catalog/economic-profile";
-import { loadConfig } from "@/platform/config";
+import { loadToolingConfig } from "@/platform/config";
 
 /** Marker slug used both to seed the game and to detect a prior seed run (idempotency). */
 const SEED_GAME_SLUG = "dota-2-seed";
@@ -315,7 +315,7 @@ export async function runSeed(pool: Pool, moneyMode: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const config = loadConfig();
+  const config = loadToolingConfig();
   const pool = createPool(config);
 
   try {
