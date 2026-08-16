@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 /**
@@ -6,9 +7,21 @@ import { defineConfig } from "vitest/config";
  * exits non-zero on a miss), not just reported.
  */
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": path.resolve(import.meta.dirname, "./src"),
+    },
+  },
   test: {
     environment: "node",
-    include: ["src/**/*.test.{ts,tsx}", "tooling/**/*.test.{ts,mjs,cjs}"],
+    // Migration test files (tests/db/**) share one Postgres DB and each resets the
+    // schema in beforeAll; running files in parallel races on DROP SCHEMA/CREATE SCHEMA.
+    fileParallelism: false,
+    include: [
+      "src/**/*.test.{ts,tsx}",
+      "tooling/**/*.test.{ts,mjs,cjs}",
+      "tests/**/*.test.{ts,tsx}",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
