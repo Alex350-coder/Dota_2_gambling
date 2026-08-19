@@ -13,3 +13,13 @@ export function generateOpaqueToken(): string {
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
+
+/**
+ * SHA-256 digest of a low-entropy identifier (email, IP address) for use as a
+ * non-reversible correlation key (login_attempts.email_hash/ip_hash, Security.md
+ * §5 / §9) — same primitive as hashToken, named separately because callers are
+ * hashing PII for correlation, not a high-entropy secret for at-rest storage.
+ */
+export function hashIdentifier(value: string): string {
+  return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
+}
