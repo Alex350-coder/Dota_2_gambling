@@ -1,5 +1,6 @@
 import { DomainError } from "@/domain/errors";
 import type {
+  AuditWriter,
   Clock,
   LoginAttemptRepository,
   PasswordHasher,
@@ -7,6 +8,7 @@ import type {
   UserRepository,
 } from "@/domain/ports";
 import { hashIdentifier } from "@/platform/crypto";
+import { loginSucceededEvent } from "@/application/audit/writer";
 
 /** Progressive lockout window (Security.md §5: "temporary lock per email_hash/ip_hash"). */
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
@@ -39,6 +41,7 @@ export interface LoginDeps<Tx> {
   readonly loginAttempts: (tx: Tx) => LoginAttemptRepository;
   readonly passwordHasher: PasswordHasher;
   readonly clock: Clock;
+  readonly audit: AuditWriter<Tx>;
 }
 
 export class LoginUseCase<Tx> {
@@ -68,9 +71,12 @@ export class LoginUseCase<Tx> {
     // Recorded in its own transaction, separate from the transaction that may
     // throw below — otherwise the throw would roll back the audit record too
     // and the lockout counter would never advance past zero failures.
-    await this.deps.uow.run((tx) =>
-      this.deps.loginAttempts(tx).record({ emailHash, ipHash, succeeded }),
-    );
+    await this.deps.uow.run(async (tx) => {
+      await this.deps.loginAttempts(tx).record({ emailHash, ipHash, succeeded });
+      if (succeeded) {
+        await this.deps.audit.record(tx, loginSucceededEvent(user.id));
+      }
+    });
 
     if (!succeeded) {
       throw new DomainError("UNAUTHENTICATED", INVALID_CREDENTIALS_MESSAGE);

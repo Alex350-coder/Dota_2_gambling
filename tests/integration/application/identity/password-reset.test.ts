@@ -14,6 +14,7 @@ import { RegisterUseCase } from "@/application/identity/register";
 import { DrizzleEmailVerificationTokenRepository } from "@/infra/db/repositories/email-verification-token-repository";
 import { ForgotPasswordUseCase } from "@/application/identity/forgot-password";
 import { ResetPasswordUseCase } from "@/application/identity/reset-password";
+import { DrizzleAuditWriter } from "@/infra/db/audit-writer";
 import { DomainError } from "@/domain/errors";
 import { testDbConfig } from "../../../helpers/test-db-config";
 import { resetAndMigrate } from "../../../helpers/reset-db";
@@ -26,6 +27,7 @@ describe("forgot-password + reset-password", () => {
   const clock = new SystemClock();
   const mail = new OutboxMailProvider();
   const passwordHasher = new Argon2PasswordHasher({ memoryCost: 8, timeCost: 1, parallelism: 1 });
+  const audit = new DrizzleAuditWriter();
 
   const register = new RegisterUseCase<DbTx>({
     uow,
@@ -35,6 +37,7 @@ describe("forgot-password + reset-password", () => {
     mail,
     ids,
     clock,
+    audit,
   });
 
   const sessionService = new SessionService<DbTx>({
@@ -61,6 +64,7 @@ describe("forgot-password + reset-password", () => {
     sessions: (tx) => new DrizzleSessionRepository(tx),
     passwordHasher,
     clock,
+    audit,
   });
 
   beforeAll(async () => {
@@ -192,5 +196,20 @@ describe("forgot-password + reset-password", () => {
     await expect(
       resetPassword.execute({ token: resetToken, newPassword: "a-perfectly-fine-passphrase-1" }),
     ).resolves.toBeUndefined();
+  });
+
+  it("emits exactly one PASSWORD_RESET audit event", async () => {
+    const { userId, email } = await registeredUser();
+    await forgotPassword.execute({ email });
+    const resetToken = await captureResetToken(email);
+
+    await resetPassword.execute({ token: resetToken, newPassword: "a-brand-new-passphrase-2" });
+
+    const rows = await pool
+      .query("SELECT action FROM audit_events WHERE entity_id = $1 AND action = 'PASSWORD_RESET'", [
+        userId,
+      ])
+      .then((r) => r.rows);
+    expect(rows).toHaveLength(1);
   });
 });

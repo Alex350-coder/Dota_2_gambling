@@ -1,6 +1,7 @@
 import { isBreachedPassword } from "@/domain/identity";
 import { DomainError } from "@/domain/errors";
 import type {
+  AuditWriter,
   Clock,
   PasswordHasher,
   PasswordResetTokenRepository,
@@ -9,6 +10,7 @@ import type {
   UserRepository,
 } from "@/domain/ports";
 import { hashToken } from "@/platform/crypto";
+import { passwordResetEvent } from "@/application/audit/writer";
 
 export interface ResetPasswordInput {
   readonly token: string;
@@ -22,6 +24,7 @@ export interface ResetPasswordDeps<Tx> {
   readonly sessions: (tx: Tx) => SessionRepository;
   readonly passwordHasher: PasswordHasher;
   readonly clock: Clock;
+  readonly audit: AuditWriter<Tx>;
 }
 
 /**
@@ -64,6 +67,7 @@ export class ResetPasswordUseCase<Tx> {
       await resetTokens.markUsed(record.id, now);
       await this.deps.users(tx).updatePasswordHash(record.userId, passwordHash, now);
       await this.deps.sessions(tx).revokeAllForUser(record.userId, now);
+      await this.deps.audit.record(tx, passwordResetEvent(record.userId));
     });
   }
 }

@@ -12,6 +12,7 @@ import { VerifyEmailUseCase } from "@/application/identity/verify-email";
 import { LoginUseCase } from "@/application/identity/login";
 import { DrizzleEmailVerificationTokenRepository } from "@/infra/db/repositories/email-verification-token-repository";
 import { OutboxMailProvider } from "@/infra/mail/outbox-mail-provider";
+import { DrizzleAuditWriter } from "@/infra/db/audit-writer";
 import { DomainError } from "@/domain/errors";
 import { testDbConfig } from "../../../helpers/test-db-config";
 import { resetAndMigrate } from "../../../helpers/reset-db";
@@ -24,6 +25,7 @@ describe("login", () => {
   const clock = new SystemClock();
   const ids = new CryptoIdGenerator();
   const mail = new OutboxMailProvider();
+  const audit = new DrizzleAuditWriter();
   const password = "a-strong-passphrase-42";
 
   const register = new RegisterUseCase<DbTx>({
@@ -34,6 +36,7 @@ describe("login", () => {
     mail,
     ids,
     clock,
+    audit,
   });
 
   const verifyEmail = new VerifyEmailUseCase<DbTx>({
@@ -41,6 +44,7 @@ describe("login", () => {
     users: (tx) => new DrizzleUserRepository(tx),
     verificationTokens: (tx) => new DrizzleEmailVerificationTokenRepository(tx),
     clock,
+    audit,
   });
 
   const login = new LoginUseCase<DbTx>({
@@ -49,6 +53,7 @@ describe("login", () => {
     loginAttempts: (tx) => new DrizzleLoginAttemptRepository(tx),
     passwordHasher,
     clock,
+    audit,
   });
 
   beforeAll(async () => {
@@ -186,5 +191,22 @@ describe("login", () => {
       .query("SELECT succeeded FROM login_attempts ORDER BY created_at DESC LIMIT 1")
       .then((r) => r.rows);
     expect(row.succeeded).toBe(true);
+  });
+
+  it("emits exactly one LOGIN_SUCCEEDED audit event on success, none on failure", async () => {
+    const email = await activeUser();
+
+    const { userId } = await login.execute({ email, password, ip: "203.0.113.70" });
+    await login
+      .execute({ email, password: "totally-wrong-passphrase", ip: "203.0.113.71" })
+      .catch(() => null);
+
+    const rows = await pool
+      .query(
+        "SELECT action FROM audit_events WHERE entity_id = $1 AND action = 'LOGIN_SUCCEEDED'",
+        [userId],
+      )
+      .then((r) => r.rows);
+    expect(rows).toHaveLength(1);
   });
 });
