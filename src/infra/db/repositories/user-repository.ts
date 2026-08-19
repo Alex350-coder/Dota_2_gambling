@@ -43,6 +43,27 @@ export class DrizzleUserRepository implements UserRepository {
   async updatePasswordHash(userId: string, passwordHash: string, updatedAt: Date): Promise<void> {
     await this.tx.update(users).set({ passwordHash, updatedAt }).where(eq(users.id, userId));
   }
+
+  async setMfaSecret(userId: string, mfaSecretEnc: string, updatedAt: Date): Promise<void> {
+    await this.tx
+      .update(users)
+      .set({ mfaSecretEnc, mfaEnabledAt: null, updatedAt })
+      .where(eq(users.id, userId));
+  }
+
+  async activateMfa(userId: string, enabledAt: Date): Promise<void> {
+    await this.tx
+      .update(users)
+      .set({ mfaEnabledAt: enabledAt, updatedAt: enabledAt })
+      .where(eq(users.id, userId));
+  }
+
+  async disableMfa(userId: string, updatedAt: Date): Promise<void> {
+    await this.tx
+      .update(users)
+      .set({ mfaSecretEnc: null, mfaEnabledAt: null, updatedAt })
+      .where(eq(users.id, userId));
+  }
 }
 
 function toUserRecord(row: typeof users.$inferSelect): UserRecord {
@@ -53,6 +74,8 @@ function toUserRecord(row: typeof users.$inferSelect): UserRecord {
     status: row.status,
     dateOfBirth: row.dateOfBirth,
     emailVerifiedAt: row.emailVerifiedAt,
+    mfaSecretEnc: row.mfaSecretEnc,
+    mfaEnabledAt: row.mfaEnabledAt,
     createdAt: row.createdAt,
   };
 }

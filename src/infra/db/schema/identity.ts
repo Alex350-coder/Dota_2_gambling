@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   status: userStatus("status").notNull().default("PENDING_VERIFICATION"),
   dateOfBirth: text("date_of_birth").notNull(),
   mfaSecretEnc: text("mfa_secret_enc"),
+  mfaEnabledAt: timestamp("mfa_enabled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -80,6 +81,16 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   tokenHash: text("token_hash").notNull().unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+});
+
+export const mfaRecoveryCodes = pgTable("mfa_recovery_codes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  codeHash: text("code_hash").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   usedAt: timestamp("used_at", { withTimezone: true }),
 });
 
