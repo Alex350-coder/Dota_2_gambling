@@ -14,6 +14,7 @@ export type {
 export type { MailProvider, MailMessage } from "./mail-provider";
 export type { LoginAttemptRepository, RecordLoginAttemptInput } from "./login-attempt-repository";
 export type { SessionRepository, SessionRecord, CreateSessionInput } from "./session-repository";
+export type { UserRoleRepository, UserRole } from "./user-role-repository";
 export type { MfaProvider } from "./mfa-provider";
 export type {
   MfaRecoveryCodeRepository,

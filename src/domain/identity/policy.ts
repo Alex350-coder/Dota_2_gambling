@@ -1,0 +1,42 @@
+import type { UserRole } from "@/domain/ports";
+
+export type Role = UserRole;
+
+export type Action = "session:revoke" | "session:list" | "user:suspend" | "audit:read";
+
+export interface Actor {
+  readonly roles: readonly Role[];
+}
+
+export interface Resource {
+  readonly ownerId: string;
+}
+
+interface ActionRule {
+  readonly roles: readonly Role[];
+  /** True when non-owning roles may still act on any resource (e.g. ADMIN). */
+  readonly anyOwner: readonly Role[];
+}
+
+const POLICY: Readonly<Record<Action, ActionRule>> = {
+  "session:revoke": { roles: ["USER"], anyOwner: ["ADMIN"] },
+  "session:list": { roles: ["USER"], anyOwner: ["ADMIN"] },
+  "user:suspend": { roles: [], anyOwner: ["ADMIN"] },
+  "audit:read": { roles: [], anyOwner: ["ADMIN", "AUDITOR"] },
+};
+
+/**
+ * Table-driven authorization (T-309). Owner-scoped actions are only granted
+ * to `roles` when the actor is also the resource owner; roles listed in
+ * `anyOwner` (e.g. ADMIN) bypass the ownership check entirely.
+ */
+export function can(actor: Actor, action: Action, resource: Resource, actorId: string): boolean {
+  const rule = POLICY[action];
+
+  if (actor.roles.some((role) => rule.anyOwner.includes(role))) {
+    return true;
+  }
+
+  const isOwner = resource.ownerId === actorId;
+  return isOwner && actor.roles.some((role) => rule.roles.includes(role));
+}
