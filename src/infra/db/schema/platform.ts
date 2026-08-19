@@ -13,6 +13,16 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./identity";
 
+export const rateLimitBuckets = pgTable(
+  "rate_limit_buckets",
+  {
+    bucketKey: text("bucket_key").notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.bucketKey, table.windowStart] })],
+);
+
 export const auditEvents = pgTable(
   "audit_events",
   {
