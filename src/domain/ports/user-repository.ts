@@ -28,4 +28,5 @@ export interface UserRepository {
   findById(id: string): Promise<UserRecord | null>;
   create(input: CreateUserInput): Promise<UserRecord>;
   activate(userId: string, verifiedAt: Date): Promise<void>;
+  updatePasswordHash(userId: string, passwordHash: string, updatedAt: Date): Promise<void>;
 }

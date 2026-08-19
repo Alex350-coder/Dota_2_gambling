@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gt, isNull, ne } from "drizzle-orm";
 import type { CreateSessionInput, SessionRecord, SessionRepository } from "@/domain/ports";
 import { sessions } from "../schema/identity";
 import type { DbTx } from "../uow";
@@ -32,12 +32,38 @@ export class DrizzleSessionRepository implements SessionRepository {
     return row ? toSessionRecord(row) : null;
   }
 
+  async findById(id: string): Promise<SessionRecord | null> {
+    const [row] = await this.tx.select().from(sessions).where(eq(sessions.id, id));
+    return row ? toSessionRecord(row) : null;
+  }
+
+  async listActiveByUserId(userId: string, now: Date): Promise<readonly SessionRecord[]> {
+    const rows = await this.tx
+      .select()
+      .from(sessions)
+      .where(
+        and(eq(sessions.userId, userId), isNull(sessions.revokedAt), gt(sessions.expiresAt, now)),
+      );
+    return rows.map(toSessionRecord);
+  }
+
   async touch(id: string, lastSeenAt: Date): Promise<void> {
     await this.tx.update(sessions).set({ lastSeenAt }).where(eq(sessions.id, id));
   }
 
   async revoke(id: string, revokedAt: Date): Promise<void> {
     await this.tx.update(sessions).set({ revokedAt }).where(eq(sessions.id, id));
+  }
+
+  async revokeAllForUser(userId: string, revokedAt: Date, exceptSessionId?: string): Promise<void> {
+    const scope = exceptSessionId
+      ? and(
+          eq(sessions.userId, userId),
+          isNull(sessions.revokedAt),
+          ne(sessions.id, exceptSessionId),
+        )
+      : and(eq(sessions.userId, userId), isNull(sessions.revokedAt));
+    await this.tx.update(sessions).set({ revokedAt }).where(scope);
   }
 }
 
