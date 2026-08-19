@@ -11,6 +11,7 @@ export type ErrorCode =
   | "ACCOUNT_SELF_EXCLUDED"
   | "AGE_REQUIREMENT_NOT_MET"
   | "MFA_REQUIRED"
+  | "MFA_INVALID_CODE"
   | "SESSION_EXPIRED"
   // Validation
   | "VALIDATION_FAILED"
@@ -56,6 +57,7 @@ export const ERROR_CODE_META: Readonly<Record<ErrorCode, ErrorCodeMeta>> = {
   ACCOUNT_SELF_EXCLUDED: { httpStatus: 403, retryable: false },
   AGE_REQUIREMENT_NOT_MET: { httpStatus: 403, retryable: false },
   MFA_REQUIRED: { httpStatus: 401, retryable: false },
+  MFA_INVALID_CODE: { httpStatus: 422, retryable: false },
   SESSION_EXPIRED: { httpStatus: 401, retryable: false },
 
   VALIDATION_FAILED: { httpStatus: 422, retryable: false },

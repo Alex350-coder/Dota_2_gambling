@@ -34,6 +34,9 @@ const baseEnvSchema = z.object({
   ARGON2_TIME_COST: z.coerce.number().int().positive().default(3),
   ARGON2_PARALLELISM: z.coerce.number().int().positive().default(1),
 
+  // TOTP MFA (Claude/Security.md §6): issuer label shown in authenticator apps.
+  MFA_ISSUER: z.string().min(1).default("Dota Gambling"),
+
   RATE_LIMIT_ENABLED: booleanFromString.default(true),
 
   RG_DEFAULT_DAILY_STAKE_LIMIT_MINOR: z.coerce.number().int().nonnegative(),

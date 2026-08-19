@@ -8,6 +8,8 @@ export interface UserRecord {
   readonly status: UserStatus;
   readonly dateOfBirth: string;
   readonly emailVerifiedAt: Date | null;
+  readonly mfaSecretEnc: string | null;
+  readonly mfaEnabledAt: Date | null;
   readonly createdAt: Date;
 }
 
@@ -29,4 +31,7 @@ export interface UserRepository {
   create(input: CreateUserInput): Promise<UserRecord>;
   activate(userId: string, verifiedAt: Date): Promise<void>;
   updatePasswordHash(userId: string, passwordHash: string, updatedAt: Date): Promise<void>;
+  setMfaSecret(userId: string, mfaSecretEnc: string, updatedAt: Date): Promise<void>;
+  activateMfa(userId: string, enabledAt: Date): Promise<void>;
+  disableMfa(userId: string, updatedAt: Date): Promise<void>;
 }
