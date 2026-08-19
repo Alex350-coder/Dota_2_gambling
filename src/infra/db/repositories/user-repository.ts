@@ -39,6 +39,10 @@ export class DrizzleUserRepository implements UserRepository {
       .set({ status: "ACTIVE", emailVerifiedAt: verifiedAt, updatedAt: verifiedAt })
       .where(eq(users.id, userId));
   }
+
+  async updatePasswordHash(userId: string, passwordHash: string, updatedAt: Date): Promise<void> {
+    await this.tx.update(users).set({ passwordHash, updatedAt }).where(eq(users.id, userId));
+  }
 }
 
 function toUserRecord(row: typeof users.$inferSelect): UserRecord {

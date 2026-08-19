@@ -6,6 +6,11 @@ export type {
   EmailVerificationToken,
   CreateEmailVerificationTokenInput,
 } from "./email-verification-token-repository";
+export type {
+  PasswordResetTokenRepository,
+  PasswordResetToken,
+  CreatePasswordResetTokenInput,
+} from "./password-reset-token-repository";
 export type { MailProvider, MailMessage } from "./mail-provider";
 export type { LoginAttemptRepository, RecordLoginAttemptInput } from "./login-attempt-repository";
 export type { SessionRepository, SessionRecord, CreateSessionInput } from "./session-repository";
