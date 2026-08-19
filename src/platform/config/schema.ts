@@ -21,7 +21,10 @@ const baseEnvSchema = z.object({
   DATABASE_LOCK_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
 
   SESSION_COOKIE_NAME: z.string().min(1).default("sid"),
-  SESSION_TTL_HOURS: z.coerce.number().int().positive().default(72),
+  // Absolute lifetime 30 days, idle timeout 7 days (Claude/Security.md §5; see
+  // Claude/Audit.md CR-005 for the correction of a stale 72h default here).
+  SESSION_TTL_HOURS: z.coerce.number().int().positive().default(720),
+  SESSION_IDLE_TIMEOUT_HOURS: z.coerce.number().int().positive().default(168),
   SESSION_STEPUP_MAX_AGE_MINUTES: z.coerce.number().int().positive().default(15),
   ENCRYPTION_KEY: z.string().min(32),
 

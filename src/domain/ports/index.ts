@@ -8,6 +8,7 @@ export type {
 } from "./email-verification-token-repository";
 export type { MailProvider, MailMessage } from "./mail-provider";
 export type { LoginAttemptRepository, RecordLoginAttemptInput } from "./login-attempt-repository";
+export type { SessionRepository, SessionRecord, CreateSessionInput } from "./session-repository";
 export type { IdGenerator } from "./id-generator";
 export type { UnitOfWork, UnitOfWorkOptions, IsolationLevel, RetryOptions } from "./unit-of-work";
 export type { Repository } from "./repository";
