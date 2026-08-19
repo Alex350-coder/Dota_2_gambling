@@ -1,1 +1,1 @@
-export { generateOpaqueToken, hashToken } from "./token";
+export { generateOpaqueToken, hashToken, hashIdentifier } from "./token";
