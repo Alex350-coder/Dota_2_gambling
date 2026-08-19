@@ -15,7 +15,13 @@ const citext = customType<{ data: string }>({
   },
 });
 
-export const userStatus = pgEnum("user_status", ["ACTIVE", "SUSPENDED", "CLOSED", "SELF_EXCLUDED"]);
+export const userStatus = pgEnum("user_status", [
+  "PENDING_VERIFICATION",
+  "ACTIVE",
+  "SUSPENDED",
+  "CLOSED",
+  "SELF_EXCLUDED",
+]);
 export const userRoleEnum = pgEnum("user_role", ["USER", "ADMIN", "STREAMER", "AUDITOR"]);
 
 export const users = pgTable("users", {
@@ -23,7 +29,7 @@ export const users = pgTable("users", {
   email: citext("email").notNull().unique(),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   passwordHash: text("password_hash"),
-  status: userStatus("status").notNull().default("ACTIVE"),
+  status: userStatus("status").notNull().default("PENDING_VERIFICATION"),
   dateOfBirth: text("date_of_birth").notNull(),
   mfaSecretEnc: text("mfa_secret_enc"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -53,6 +59,28 @@ export const sessions = pgTable("sessions", {
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
+});
+
+export const emailVerificationTokens = pgTable("email_verification_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+});
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
 });
 
 export const loginAttempts = pgTable("login_attempts", {

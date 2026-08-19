@@ -1,5 +1,12 @@
 export type { Clock } from "./clock";
 export type { PasswordHasher } from "./password-hasher";
+export type { UserRepository, UserRecord, UserStatus, CreateUserInput } from "./user-repository";
+export type {
+  EmailVerificationTokenRepository,
+  EmailVerificationToken,
+  CreateEmailVerificationTokenInput,
+} from "./email-verification-token-repository";
+export type { MailProvider, MailMessage } from "./mail-provider";
 export type { IdGenerator } from "./id-generator";
 export type { UnitOfWork, UnitOfWorkOptions, IsolationLevel, RetryOptions } from "./unit-of-work";
 export type { Repository } from "./repository";
