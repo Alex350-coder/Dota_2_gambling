@@ -1,5 +1,6 @@
 import { DomainError } from "@/domain/errors";
-import type { Clock, SessionRepository, UnitOfWork } from "@/domain/ports";
+import type { AuditWriter, Clock, SessionRepository, UnitOfWork } from "@/domain/ports";
+import { sessionRevokedEvent } from "@/application/audit/writer";
 
 export interface RevokeSessionInput {
   readonly userId: string;
@@ -10,6 +11,7 @@ export interface RevokeSessionDeps<Tx> {
   readonly uow: UnitOfWork<Tx>;
   readonly sessions: (tx: Tx) => SessionRepository;
   readonly clock: Clock;
+  readonly audit: AuditWriter<Tx>;
 }
 
 /**
@@ -34,6 +36,7 @@ export class RevokeSessionUseCase<Tx> {
       }
 
       await sessions.revoke(session.id, now);
+      await this.deps.audit.record(tx, sessionRevokedEvent(input.userId, session.id));
     });
   }
 }

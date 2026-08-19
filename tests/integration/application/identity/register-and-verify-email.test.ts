@@ -5,6 +5,7 @@ import { DrizzleUnitOfWork, type DbTx } from "@/infra/db/uow";
 import { DrizzleUserRepository } from "@/infra/db/repositories/user-repository";
 import { DrizzleEmailVerificationTokenRepository } from "@/infra/db/repositories/email-verification-token-repository";
 import { OutboxMailProvider } from "@/infra/mail/outbox-mail-provider";
+import { DrizzleAuditWriter } from "@/infra/db/audit-writer";
 import { CryptoIdGenerator } from "@/infra/id-generator";
 import { SystemClock } from "@/infra/clock";
 import { Argon2PasswordHasher } from "@/infra/crypto/password";
@@ -22,6 +23,7 @@ describe("register + verify-email", () => {
   const clock = new SystemClock();
   const ids = new CryptoIdGenerator();
   const mail = new OutboxMailProvider();
+  const audit = new DrizzleAuditWriter();
 
   const register = new RegisterUseCase<DbTx>({
     uow,
@@ -31,6 +33,7 @@ describe("register + verify-email", () => {
     mail,
     ids,
     clock,
+    audit,
   });
 
   const verifyEmail = new VerifyEmailUseCase<DbTx>({
@@ -38,6 +41,7 @@ describe("register + verify-email", () => {
     users: (tx) => new DrizzleUserRepository(tx),
     verificationTokens: (tx) => new DrizzleEmailVerificationTokenRepository(tx),
     clock,
+    audit,
   });
 
   beforeAll(async () => {
@@ -152,6 +156,37 @@ describe("register + verify-email", () => {
     await expect(
       register.execute({ email: uniqueEmail(), password: "short", dateOfBirth: "1990-01-01" }),
     ).rejects.toBeInstanceOf(DomainError);
+  });
+
+  it("emits exactly one USER_REGISTERED audit event", async () => {
+    const email = uniqueEmail();
+    const { userId } = await register.execute({
+      email,
+      password: "a-strong-passphrase-42",
+      dateOfBirth: "1990-01-01",
+    });
+
+    const rows = await pool
+      .query(
+        "SELECT action FROM audit_events WHERE entity_id = $1 AND action = 'USER_REGISTERED'",
+        [userId],
+      )
+      .then((r) => r.rows);
+    expect(rows).toHaveLength(1);
+  });
+
+  it("emits exactly one EMAIL_VERIFIED audit event", async () => {
+    const email = uniqueEmail();
+    const { userId, token } = await captureVerificationToken(email);
+
+    await verifyEmail.execute({ token });
+
+    const rows = await pool
+      .query("SELECT action FROM audit_events WHERE entity_id = $1 AND action = 'EMAIL_VERIFIED'", [
+        userId,
+      ])
+      .then((r) => r.rows);
+    expect(rows).toHaveLength(1);
   });
 
   async function captureVerificationToken(

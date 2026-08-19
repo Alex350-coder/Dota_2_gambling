@@ -9,6 +9,7 @@ import { CryptoIdGenerator } from "@/infra/id-generator";
 import { SystemClock } from "@/infra/clock";
 import { Argon2PasswordHasher } from "@/infra/crypto/password";
 import { TotpMfaProvider } from "@/infra/crypto/totp";
+import { DrizzleAuditWriter } from "@/infra/db/audit-writer";
 import {
   DisableMfaUseCase,
   EnrollMfaUseCase,
@@ -38,6 +39,7 @@ describe("MFA enrol/verify/disable/recovery", () => {
     ids,
     clock,
     encryptionKey,
+    audit: new DrizzleAuditWriter(),
   };
 
   const enroll = new EnrollMfaUseCase<DbTx>(deps);
@@ -169,5 +171,36 @@ describe("MFA enrol/verify/disable/recovery", () => {
     await expect(redeemRecoveryCode.execute({ userId, code })).rejects.toMatchObject({
       code: "MFA_INVALID_CODE",
     });
+  });
+
+  it("emits exactly one audit event per MFA lifecycle action", async () => {
+    const { userId, password } = await createUser();
+
+    async function countAuditEvents(action: string): Promise<number> {
+      const rows = await pool
+        .query("SELECT 1 FROM audit_events WHERE entity_id = $1 AND action = $2", [userId, action])
+        .then((r) => r.rows);
+      return rows.length;
+    }
+
+    const { otpAuthUri, recoveryCodes } = await enroll.execute({
+      userId,
+      accountLabel: "user@example.test",
+    });
+    expect(await countAuditEvents("MFA_ENROLLED")).toBe(1);
+
+    const secret = extractSecret(otpAuthUri);
+    await verify.execute({ userId, code: await generate({ secret }) });
+    expect(await countAuditEvents("MFA_VERIFIED")).toBe(1);
+
+    const [code] = recoveryCodes;
+    if (!code) {
+      throw new Error("expected at least one recovery code");
+    }
+    await redeemRecoveryCode.execute({ userId, code });
+    expect(await countAuditEvents("MFA_RECOVERY_CODE_REDEEMED")).toBe(1);
+
+    await disable.execute({ userId, password });
+    expect(await countAuditEvents("MFA_DISABLED")).toBe(1);
   });
 });

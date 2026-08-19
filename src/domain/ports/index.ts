@@ -22,6 +22,7 @@ export type {
   CreateMfaRecoveryCodeInput,
 } from "./mfa-recovery-code-repository";
 export type { IdGenerator } from "./id-generator";
+export type { AuditWriter, AuditEventInput } from "./audit-writer";
 export type { UnitOfWork, UnitOfWorkOptions, IsolationLevel, RetryOptions } from "./unit-of-work";
 export type { Repository } from "./repository";
 export type { BetOrderRepository } from "./bet-order-repository";

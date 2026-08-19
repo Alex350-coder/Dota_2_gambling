@@ -8,6 +8,7 @@ import { SystemClock } from "@/infra/clock";
 import { SessionService } from "@/platform/session/service";
 import { ListSessionsUseCase } from "@/application/identity/list-sessions";
 import { RevokeSessionUseCase } from "@/application/identity/revoke-session";
+import { DrizzleAuditWriter } from "@/infra/db/audit-writer";
 import { DomainError } from "@/domain/errors";
 import { testDbConfig } from "../../../helpers/test-db-config";
 import { resetAndMigrate } from "../../../helpers/reset-db";
@@ -18,6 +19,7 @@ describe("list-sessions + revoke-session", () => {
   const uow = new DrizzleUnitOfWork(db);
   const ids = new CryptoIdGenerator();
   const clock = new SystemClock();
+  const audit = new DrizzleAuditWriter();
 
   const sessionService = new SessionService<DbTx>({
     uow,
@@ -37,6 +39,7 @@ describe("list-sessions + revoke-session", () => {
     uow,
     sessions: (tx) => new DrizzleSessionRepository(tx),
     clock,
+    audit,
   });
 
   beforeAll(async () => {
@@ -125,5 +128,20 @@ describe("list-sessions + revoke-session", () => {
     await expect(revokeSession.execute({ userId, sessionId: randomUUID() })).rejects.toBeInstanceOf(
       DomainError,
     );
+  });
+
+  it("emits exactly one SESSION_REVOKED audit event", async () => {
+    const userId = await createUser();
+    const { session } = await sessionService.createSession({ userId, ip: null, userAgent: null });
+
+    await revokeSession.execute({ userId, sessionId: session.id });
+
+    const rows = await pool
+      .query(
+        "SELECT action FROM audit_events WHERE entity_id = $1 AND action = 'SESSION_REVOKED'",
+        [session.id],
+      )
+      .then((r) => r.rows);
+    expect(rows).toHaveLength(1);
   });
 });

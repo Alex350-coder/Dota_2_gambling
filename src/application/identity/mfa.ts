@@ -1,5 +1,6 @@
 import { DomainError } from "@/domain/errors";
 import type {
+  AuditWriter,
   Clock,
   IdGenerator,
   MfaProvider,
@@ -9,6 +10,12 @@ import type {
   UserRepository,
 } from "@/domain/ports";
 import { decrypt, encrypt, hashToken } from "@/platform/crypto";
+import {
+  mfaDisabledEvent,
+  mfaEnrolledEvent,
+  mfaRecoveryCodeRedeemedEvent,
+  mfaVerifiedEvent,
+} from "@/application/audit/writer";
 
 const RECOVERY_CODE_COUNT = 8;
 
@@ -21,6 +28,7 @@ export interface MfaDeps<Tx> {
   readonly ids: IdGenerator;
   readonly clock: Clock;
   readonly encryptionKey: string;
+  readonly audit: AuditWriter<Tx>;
 }
 
 export interface EnrollMfaInput {
@@ -60,6 +68,7 @@ export class EnrollMfaUseCase<Tx> {
           createdAt: now,
         })),
       );
+      await this.deps.audit.record(tx, mfaEnrolledEvent(input.userId));
     });
 
     return { otpAuthUri, recoveryCodes };
@@ -94,6 +103,7 @@ export class VerifyMfaUseCase<Tx> {
 
       if (!user.mfaEnabledAt) {
         await users.activateMfa(input.userId, now);
+        await this.deps.audit.record(tx, mfaVerifiedEvent(input.userId));
       }
     });
   }
@@ -124,6 +134,7 @@ export class DisableMfaUseCase<Tx> {
 
       await users.disableMfa(input.userId, now);
       await this.deps.recoveryCodes(tx).markAllUsedForUser(input.userId, now);
+      await this.deps.audit.record(tx, mfaDisabledEvent(input.userId));
     });
   }
 }
@@ -149,6 +160,7 @@ export class RedeemMfaRecoveryCodeUseCase<Tx> {
       }
 
       await recoveryCodes.markUsed(record.id, now);
+      await this.deps.audit.record(tx, mfaRecoveryCodeRedeemedEvent(input.userId));
     });
   }
 }

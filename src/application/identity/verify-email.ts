@@ -1,11 +1,13 @@
 import { DomainError } from "@/domain/errors";
 import type {
+  AuditWriter,
   Clock,
   EmailVerificationTokenRepository,
   UnitOfWork,
   UserRepository,
 } from "@/domain/ports";
 import { hashToken } from "@/platform/crypto";
+import { emailVerifiedEvent } from "@/application/audit/writer";
 
 export interface VerifyEmailInput {
   readonly token: string;
@@ -16,6 +18,7 @@ export interface VerifyEmailDeps<Tx> {
   readonly users: (tx: Tx) => UserRepository;
   readonly verificationTokens: (tx: Tx) => EmailVerificationTokenRepository;
   readonly clock: Clock;
+  readonly audit: AuditWriter<Tx>;
 }
 
 export class VerifyEmailUseCase<Tx> {
@@ -39,6 +42,7 @@ export class VerifyEmailUseCase<Tx> {
 
       await tokens.markUsed(record.id, now);
       await this.deps.users(tx).activate(record.userId, now);
+      await this.deps.audit.record(tx, emailVerifiedEvent(record.userId));
     });
   }
 }

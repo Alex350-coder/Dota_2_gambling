@@ -1,6 +1,7 @@
 import { isAdult, isBreachedPassword } from "@/domain/identity";
 import { DomainError } from "@/domain/errors";
 import type {
+  AuditWriter,
   Clock,
   EmailVerificationTokenRepository,
   IdGenerator,
@@ -10,6 +11,7 @@ import type {
   UserRepository,
 } from "@/domain/ports";
 import { generateOpaqueToken, hashToken } from "@/platform/crypto";
+import { userRegisteredEvent } from "@/application/audit/writer";
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -31,6 +33,7 @@ export interface RegisterDeps<Tx> {
   readonly mail: MailProvider<Tx>;
   readonly ids: IdGenerator;
   readonly clock: Clock;
+  readonly audit: AuditWriter<Tx>;
 }
 
 export class RegisterUseCase<Tx> {
@@ -88,6 +91,8 @@ export class RegisterUseCase<Tx> {
         template: "verify-email",
         data: { token },
       });
+
+      await this.deps.audit.record(tx, userRegisteredEvent(userId));
 
       return { userId };
     });
