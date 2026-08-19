@@ -25,6 +25,12 @@ const baseEnvSchema = z.object({
   SESSION_STEPUP_MAX_AGE_MINUTES: z.coerce.number().int().positive().default(15),
   ENCRYPTION_KEY: z.string().min(32),
 
+  // Argon2id parameters (Claude/Security.md §4): tuned to take >=250ms on the
+  // reference host. KiB memory cost, iteration count, and parallelism degree.
+  ARGON2_MEMORY_COST: z.coerce.number().int().positive().default(262144),
+  ARGON2_TIME_COST: z.coerce.number().int().positive().default(3),
+  ARGON2_PARALLELISM: z.coerce.number().int().positive().default(1),
+
   RATE_LIMIT_ENABLED: booleanFromString.default(true),
 
   RG_DEFAULT_DAILY_STAKE_LIMIT_MINOR: z.coerce.number().int().nonnegative(),
