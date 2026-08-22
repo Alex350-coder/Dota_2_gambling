@@ -2,7 +2,8 @@ import type { UserRole } from "@/domain/ports";
 
 export type Role = UserRole;
 
-export type Action = "session:revoke" | "session:list" | "user:suspend" | "audit:read";
+export type Action =
+  "session:revoke" | "session:list" | "user:suspend" | "user:read" | "mfa:manage" | "audit:read";
 
 export interface Actor {
   readonly roles: readonly Role[];
@@ -22,6 +23,10 @@ const POLICY: Readonly<Record<Action, ActionRule>> = {
   "session:revoke": { roles: ["USER"], anyOwner: ["ADMIN"] },
   "session:list": { roles: ["USER"], anyOwner: ["ADMIN"] },
   "user:suspend": { roles: [], anyOwner: ["ADMIN"] },
+  "user:read": { roles: ["USER"], anyOwner: ["ADMIN"] },
+  // No anyOwner bypass: MFA enrollment/verify/disable is always self-service,
+  // even for ADMIN (disable already requires re-proving the account password).
+  "mfa:manage": { roles: ["USER"], anyOwner: [] },
   "audit:read": { roles: [], anyOwner: ["ADMIN", "AUDITOR"] },
 };
 

@@ -16,15 +16,30 @@ describe("require-authz", () => {
         code: "export function GET() { authorize(request); return Response.json({}); }",
         filename: "src/app/api/bets/route.ts",
       },
-      // Positive fixture: route explicitly opts out via PUBLIC_ROUTE marker.
+      // Positive fixture: route calls the self-scoped authorizeSelf(...) wrapper.
       {
-        code: "export const PUBLIC_ROUTE = true; export function GET() { return Response.json({}); }",
+        code: "export function POST() { authorizeSelf(deps, token, 'session:revoke'); return Response.json({}); }",
+        filename: "src/app/api/me/sessions/route.ts",
+      },
+      // Positive fixture: route explicitly opts out via a PUBLIC_ROUTE comment
+      // marker. A real `export const PUBLIC_ROUTE` is rejected by Next.js's
+      // own route-export validator at build time, so the opt-out must be a
+      // comment rather than an export.
+      {
+        code: "// PUBLIC_ROUTE\nexport function GET() { return Response.json({}); }",
         filename: "src/app/api/health/route.ts",
       },
       // Files outside src/app/api are not checked.
       {
         code: "export function helper() { return 1; }",
         filename: "src/app/page.ts",
+      },
+      // Shared modules under src/app/api/** that aren't route files (e.g. Zod
+      // schemas shared across route handlers) are not checked — the route
+      // file importing them is what must call authorize()/PUBLIC_ROUTE.
+      {
+        code: "export const schema = {};",
+        filename: "src/app/api/v1/auth/schemas.ts",
       },
     ],
     invalid: [
