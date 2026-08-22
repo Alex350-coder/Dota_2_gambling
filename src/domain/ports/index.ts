@@ -50,6 +50,7 @@ export type {
   MatchParticipant,
   AddMatchParticipantInput,
 } from "./match-repository";
+export type { MarketTypeRepository } from "./market-type-repository";
 export type { EconomicModel } from "./economic-model";
 export type { PaymentProvider, PaymentReference } from "./payment-provider";
 export type {
