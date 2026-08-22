@@ -42,6 +42,14 @@ export type {
   Tournament,
   CreateTournamentInput,
 } from "./tournament-repository";
+export type { TeamRepository, Team, CreateTeamInput } from "./team-repository";
+export type {
+  MatchRepository,
+  Match,
+  CreateMatchInput,
+  MatchParticipant,
+  AddMatchParticipantInput,
+} from "./match-repository";
 export type { EconomicModel } from "./economic-model";
 export type { PaymentProvider, PaymentReference } from "./payment-provider";
 export type {

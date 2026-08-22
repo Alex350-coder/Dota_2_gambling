@@ -128,3 +128,39 @@ export function tournamentCreatedEvent(actorId: string, tournamentId: string): A
     entityId: tournamentId,
   };
 }
+
+export function teamCreatedEvent(actorId: string, teamId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "TEAM_CREATED",
+    entityType: "team",
+    entityId: teamId,
+  };
+}
+
+export function matchCreatedEvent(actorId: string, matchId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "MATCH_CREATED",
+    entityType: "match",
+    entityId: matchId,
+  };
+}
+
+/**
+ * `match_participants` has no single-column id (its PK is the
+ * `(match_id, team_id)` pair) and `audit_events.entity_id` is a `uuid`
+ * column, so this event is keyed on `matchId` — `teamId` is recoverable via
+ * `match_participants` itself, not stored redundantly in the audit row.
+ */
+export function matchParticipantAddedEvent(actorId: string, matchId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "MATCH_PARTICIPANT_ADDED",
+    entityType: "match_participant",
+    entityId: matchId,
+  };
+}
