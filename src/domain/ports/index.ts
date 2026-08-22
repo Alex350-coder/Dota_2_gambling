@@ -30,6 +30,18 @@ export type { LedgerWriter, LedgerPostInput, LedgerPostEntry } from "./ledger-wr
 export type { WalletRepository, Wallet } from "./wallet-repository";
 export type { AllocationRepository, MatchAllocation } from "./allocation-repository";
 export type { MarketRepository, Market } from "./market-repository";
+export type {
+  GameRepository,
+  Game,
+  CreateGameInput,
+  GameMode,
+  CreateGameModeInput,
+} from "./game-repository";
+export type {
+  TournamentRepository,
+  Tournament,
+  CreateTournamentInput,
+} from "./tournament-repository";
 export type { EconomicModel } from "./economic-model";
 export type { PaymentProvider, PaymentReference } from "./payment-provider";
 export type {

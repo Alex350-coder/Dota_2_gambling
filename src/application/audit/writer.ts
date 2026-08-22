@@ -94,3 +94,37 @@ export function mfaRecoveryCodeRedeemedEvent(userId: string): AuditEventInput {
     entityId: userId,
   };
 }
+
+/**
+ * Catalog event builders (T-401, T-402). Every catalog admin mutation writes
+ * exactly one `audit_events` row through the same shape (T-414).
+ */
+export function gameCreatedEvent(actorId: string, gameId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "GAME_CREATED",
+    entityType: "game",
+    entityId: gameId,
+  };
+}
+
+export function gameModeCreatedEvent(actorId: string, gameModeId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "GAME_MODE_CREATED",
+    entityType: "game_mode",
+    entityId: gameModeId,
+  };
+}
+
+export function tournamentCreatedEvent(actorId: string, tournamentId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "TOURNAMENT_CREATED",
+    entityType: "tournament",
+    entityId: tournamentId,
+  };
+}

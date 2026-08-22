@@ -3,7 +3,13 @@ import type { UserRole } from "@/domain/ports";
 export type Role = UserRole;
 
 export type Action =
-  "session:revoke" | "session:list" | "user:suspend" | "user:read" | "mfa:manage" | "audit:read";
+  | "session:revoke"
+  | "session:list"
+  | "user:suspend"
+  | "user:read"
+  | "mfa:manage"
+  | "audit:read"
+  | "catalog:manage";
 
 export interface Actor {
   readonly roles: readonly Role[];
@@ -28,6 +34,10 @@ const POLICY: Readonly<Record<Action, ActionRule>> = {
   // even for ADMIN (disable already requires re-proving the account password).
   "mfa:manage": { roles: ["USER"], anyOwner: [] },
   "audit:read": { roles: [], anyOwner: ["ADMIN", "AUDITOR"] },
+  // Catalog entities (games, tournaments, teams, matches, market types,
+  // economic profiles, markets, streamers) have no per-user owner — only
+  // ADMIN may manage them.
+  "catalog:manage": { roles: [], anyOwner: ["ADMIN"] },
 };
 
 /**
