@@ -32,6 +32,17 @@ jobs:
     env:
       MONEY_MODE: SIMULATED
       DATABASE_URL: postgresql://postgres:ci_local_only@localhost:5432/betting_ci
+      APP_URL: http://localhost:3000
+      # Ephemeral, CI-only value (T-316) — the running server needs it to boot, it
+      # protects nothing production-facing here.
+      ENCRYPTION_KEY: ci-only-encryption-key-not-a-secret-000
+      MFA_ISSUER: Dota Gambling CI
+      RATE_LIMIT_ENABLED: "true"
+      RG_DEFAULT_DAILY_STAKE_LIMIT_MINOR: "100000"
+      RG_LIMIT_INCREASE_COOLING_OFF_HOURS: "24"
+      SIMULATED_CREDIT_DAILY_CAP_MINOR: "100000"
+      METRICS_ENABLED: "true"
+      METRICS_TOKEN: ci-only-metrics-token
     services:
       postgres:
         image: postgres:16-alpine

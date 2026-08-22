@@ -6,6 +6,18 @@ export function generateCsrfToken(): string {
   return generateOpaqueToken();
 }
 
+export const CSRF_COOKIE_NAME = "csrf_token";
+export const CSRF_HEADER_NAME = "x-csrf-token";
+
+/**
+ * Unlike the session cookie, this one is deliberately *not* HttpOnly — the
+ * double-submit pattern requires client JS to read it and echo it back in
+ * `x-csrf-token` on the next mutating request.
+ */
+export function serializeCsrfCookie(token: string): string {
+  return [`${CSRF_COOKIE_NAME}=${token}`, "Path=/", "Secure", "SameSite=Lax"].join("; ");
+}
+
 export interface CsrfCheckInput {
   readonly cookieToken: string | undefined;
   readonly headerToken: string | undefined;

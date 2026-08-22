@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateCsrfToken, verifyCsrf } from "./token";
+import { generateCsrfToken, serializeCsrfCookie, verifyCsrf } from "./token";
 
 describe("generateCsrfToken", () => {
   it("generates a high-entropy, url-safe token", () => {
@@ -86,5 +86,19 @@ describe("verifyCsrf", () => {
         allowedOrigin,
       }),
     ).toBe(false);
+  });
+});
+
+describe("serializeCsrfCookie", () => {
+  it("is readable by client JS (not HttpOnly) so it can be echoed back in a header", () => {
+    const cookie = serializeCsrfCookie("a-token-value");
+    expect(cookie).not.toContain("HttpOnly");
+  });
+
+  it("still carries Secure and SameSite=Lax", () => {
+    const cookie = serializeCsrfCookie("a-token-value");
+    expect(cookie).toContain("Secure");
+    expect(cookie).toContain("SameSite=Lax");
+    expect(cookie).toContain("Path=/");
   });
 });

@@ -1,22 +1,29 @@
 "use strict";
 
-const API_ROUTE_PATH = /(^|[\\/])src[\\/]app[\\/]api[\\/]/;
+// Only actual Next.js route handler files are checked — shared modules under
+// src/app/api/** (e.g. Zod schemas imported by multiple routes) are not
+// themselves route handlers, so they never call authorize()/PUBLIC_ROUTE.
+const API_ROUTE_PATH = /(^|[\\/])src[\\/]app[\\/]api[\\/].*route\.[jt]sx?$/;
+
+const AUTHZ_CALLEE_NAMES = new Set(["authorize", "authorizeSelf"]);
 
 function callsAuthorize(node) {
   return (
     node.type === "CallExpression" &&
     node.callee.type === "Identifier" &&
-    node.callee.name === "authorize"
+    AUTHZ_CALLEE_NAMES.has(node.callee.name)
   );
 }
 
-function exportsPublicRouteMarker(node) {
-  if (node.type !== "ExportNamedDeclaration" || !node.declaration) return false;
-  const declaration = node.declaration;
-  if (declaration.type !== "VariableDeclaration") return false;
-  return declaration.declarations.some(
-    (decl) => decl.id.type === "Identifier" && decl.id.name === "PUBLIC_ROUTE",
-  );
+/**
+ * A real `export const PUBLIC_ROUTE = ...` is rejected by Next.js's own
+ * route-export validator at build time (only a fixed set of names — GET,
+ * POST, config, runtime, etc. — may be exported from a route.ts file), so
+ * the public-route opt-out has to be a comment marker instead of an export.
+ */
+function hasPublicRouteComment(context) {
+  const sourceCode = context.sourceCode ?? context.getSourceCode();
+  return sourceCode.getAllComments().some((comment) => comment.value.trim() === "PUBLIC_ROUTE");
 }
 
 module.exports = {
@@ -24,12 +31,12 @@ module.exports = {
     type: "problem",
     docs: {
       description:
-        "Require every route handler under src/app/api/** to call authorize(...) or export a PUBLIC_ROUTE marker.",
+        "Require every route.ts handler under src/app/api/** to call authorize(...)/authorizeSelf(...) or carry a `// PUBLIC_ROUTE` comment marker.",
     },
     schema: [],
     messages: {
       requireAuthz:
-        "API route handlers must call authorize(...) or export a PUBLIC_ROUTE marker to explicitly opt out.",
+        "API route handlers must call authorize(...)/authorizeSelf(...) or carry a `// PUBLIC_ROUTE` comment marker to explicitly opt out.",
     },
   },
   create(context) {
@@ -39,7 +46,6 @@ module.exports = {
     }
 
     let hasAuthorizeCall = false;
-    let hasPublicRouteMarker = false;
 
     return {
       CallExpression(node) {
@@ -47,13 +53,8 @@ module.exports = {
           hasAuthorizeCall = true;
         }
       },
-      ExportNamedDeclaration(node) {
-        if (exportsPublicRouteMarker(node)) {
-          hasPublicRouteMarker = true;
-        }
-      },
       "Program:exit"(node) {
-        if (!hasAuthorizeCall && !hasPublicRouteMarker) {
+        if (!hasAuthorizeCall && !hasPublicRouteComment(context)) {
           context.report({ node, messageId: "requireAuthz" });
         }
       },

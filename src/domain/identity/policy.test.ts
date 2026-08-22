@@ -35,4 +35,28 @@ describe("can", () => {
       true,
     );
   });
+
+  it("allows a USER to read their own profile", () => {
+    expect(can({ roles: ["USER"] }, "user:read", { ownerId: "u1" }, "u1")).toBe(true);
+  });
+
+  it("denies a USER reading another user's profile", () => {
+    expect(can({ roles: ["USER"] }, "user:read", { ownerId: "u2" }, "u1")).toBe(false);
+  });
+
+  it("allows an ADMIN to read any user's profile", () => {
+    expect(can({ roles: ["ADMIN"] }, "user:read", { ownerId: "u2" }, "admin1")).toBe(true);
+  });
+
+  it("allows a USER to manage their own MFA settings", () => {
+    expect(can({ roles: ["USER"] }, "mfa:manage", { ownerId: "u1" }, "u1")).toBe(true);
+  });
+
+  it("denies a USER managing another user's MFA settings", () => {
+    expect(can({ roles: ["USER"] }, "mfa:manage", { ownerId: "u2" }, "u1")).toBe(false);
+  });
+
+  it("denies even an ADMIN from managing another user's MFA settings", () => {
+    expect(can({ roles: ["ADMIN"] }, "mfa:manage", { ownerId: "u2" }, "admin1")).toBe(false);
+  });
 });
