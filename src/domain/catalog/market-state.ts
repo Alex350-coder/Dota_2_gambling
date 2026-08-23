@@ -123,3 +123,25 @@ export function assertTransition(
     );
   }
 }
+
+/**
+ * Pure guard for Phase 5 order placement to consume — a market only accepts
+ * new orders while `OPEN` and strictly before `closesAt`. Kept here (not in
+ * `src/application/betting/**`, which doesn't have a placement use case yet)
+ * so Phase 5 can import it without Phase 4 reaching into betting internals.
+ */
+export function assertMarketAcceptingOrders(
+  market: { readonly status: MarketStatus; readonly closesAt: Date },
+  now: Date,
+): void {
+  if (market.status === "SUSPENDED") {
+    throw new DomainError("MARKET_SUSPENDED", "market is suspended and not accepting orders", {
+      details: { status: market.status },
+    });
+  }
+  if (market.status !== "OPEN" || now >= market.closesAt) {
+    throw new DomainError("MARKET_CLOSED", "market is not open for orders", {
+      details: { status: market.status, closesAt: market.closesAt },
+    });
+  }
+}

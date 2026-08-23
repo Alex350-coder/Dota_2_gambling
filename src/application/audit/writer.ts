@@ -236,3 +236,17 @@ export function marketCreatedEvent(actorId: string, marketId: string): AuditEven
     entityId: marketId,
   };
 }
+
+/** Catalog event builders (T-407, T-408). `actorId` is `null` for scheduler-driven transitions. */
+export function marketStatusChangedEvent(
+  actorId: string | null,
+  marketId: string,
+): AuditEventInput {
+  return {
+    actorType: actorId === null ? "system" : "user",
+    actorId,
+    action: "MARKET_STATUS_CHANGED",
+    entityType: "market",
+    entityId: marketId,
+  };
+}

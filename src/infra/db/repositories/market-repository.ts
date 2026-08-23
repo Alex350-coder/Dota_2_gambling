@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { and, eq, lte } from "drizzle-orm";
+import type { MarketStatus } from "@/domain/catalog";
 import type { CreateMarketInput, Market, MarketRepository } from "@/domain/ports";
 import { markets } from "../schema/catalog";
 import type { DbTx } from "../uow";
@@ -33,6 +34,27 @@ export class DrizzleMarketRepository implements MarketRepository {
 
   async findByMatchId(matchId: string): Promise<Market[]> {
     const rows = await this.tx.select().from(markets).where(eq(markets.matchId, matchId));
+    return rows.map((row) => this.toMarket(row));
+  }
+
+  async updateStatus(id: string, status: MarketStatus): Promise<Market> {
+    const [row] = await this.tx
+      .update(markets)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(markets.id, id))
+      .returning();
+
+    if (!row) {
+      throw new Error("update markets returned no row");
+    }
+    return this.toMarket(row);
+  }
+
+  async findOpenPastClosesAt(now: Date): Promise<Market[]> {
+    const rows = await this.tx
+      .select()
+      .from(markets)
+      .where(and(eq(markets.status, "OPEN"), lte(markets.closesAt, now)));
     return rows.map((row) => this.toMarket(row));
   }
 
