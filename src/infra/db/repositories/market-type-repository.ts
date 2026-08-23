@@ -25,6 +25,11 @@ export class DrizzleMarketTypeRepository implements MarketTypeRepository {
     return this.toMarketType(row);
   }
 
+  async findById(id: string): Promise<PersistedMarketType | null> {
+    const [row] = await this.tx.select().from(marketTypes).where(eq(marketTypes.id, id));
+    return row ? this.toMarketType(row) : null;
+  }
+
   async findByCode(code: string): Promise<PersistedMarketType | null> {
     const [row] = await this.tx.select().from(marketTypes).where(eq(marketTypes.code, code));
     return row ? this.toMarketType(row) : null;

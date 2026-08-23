@@ -29,7 +29,8 @@ export type { BetOrderRepository } from "./bet-order-repository";
 export type { LedgerWriter, LedgerPostInput, LedgerPostEntry } from "./ledger-writer";
 export type { WalletRepository, Wallet } from "./wallet-repository";
 export type { AllocationRepository, MatchAllocation } from "./allocation-repository";
-export type { MarketRepository, Market } from "./market-repository";
+export type { MarketRepository, Market, CreateMarketInput } from "./market-repository";
+export type { OutcomeRepository, Outcome, CreateOutcomeInput } from "./outcome-repository";
 export type {
   GameRepository,
   Game,

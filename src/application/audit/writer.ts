@@ -225,3 +225,14 @@ export function streamerChannelCreatedEvent(
     entityId: streamerChannelId,
   };
 }
+
+/** Catalog event builders (T-406). */
+export function marketCreatedEvent(actorId: string, marketId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "MARKET_CREATED",
+    entityType: "market",
+    entityId: marketId,
+  };
+}

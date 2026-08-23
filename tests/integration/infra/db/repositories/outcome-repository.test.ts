@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, createPool } from "@/infra/db/client";
 import { DrizzleUnitOfWork, type DbTx } from "@/infra/db/uow";
+import { DrizzleOutcomeRepository } from "@/infra/db/repositories/outcome-repository";
 import { DrizzleMarketRepository } from "@/infra/db/repositories/market-repository";
 import { DrizzleMarketTypeRepository } from "@/infra/db/repositories/market-type-repository";
 import { DrizzleEconomicProfileRepository } from "@/infra/db/repositories/economic-profile-repository";
@@ -10,7 +11,7 @@ import { CryptoIdGenerator } from "@/infra/id-generator";
 import { testDbConfig } from "../../../../helpers/test-db-config";
 import { resetAndMigrate } from "../../../../helpers/reset-db";
 
-describe("DrizzleMarketRepository", () => {
+describe("DrizzleOutcomeRepository", () => {
   const pool = createPool(testDbConfig());
   const db = createDb(pool);
   const uow = new DrizzleUnitOfWork(db);
@@ -24,12 +25,7 @@ describe("DrizzleMarketRepository", () => {
     await pool.end();
   });
 
-  async function createFixtures(): Promise<{
-    matchId: string;
-    marketTypeId: string;
-    streamerId: string;
-    economicProfileId: string;
-  }> {
+  async function createMarket(): Promise<string> {
     const userId = ids.next();
     await pool.query(
       "INSERT INTO users (id, email, status, date_of_birth) VALUES ($1, $2, 'ACTIVE', '1990-01-01')",
@@ -81,39 +77,43 @@ describe("DrizzleMarketRepository", () => {
         maxStakeMinor: 10_000_000n,
       }),
     );
-
-    return {
-      matchId: matchRow.id as string,
-      marketTypeId: marketType.id,
-      streamerId: streamer.id,
-      economicProfileId: profile.id,
-    };
-  }
-
-  it("creates a market and finds it by id and by matchId", async () => {
-    const fx = await createFixtures();
-
-    const created = await uow.run(async (tx: DbTx) =>
+    const market = await uow.run(async (tx: DbTx) =>
       new DrizzleMarketRepository(tx).create({
         id: randomUUID(),
-        matchId: fx.matchId,
-        marketTypeId: fx.marketTypeId,
-        streamerId: fx.streamerId,
-        economicProfileId: fx.economicProfileId,
+        matchId: matchRow.id as string,
+        marketTypeId: marketType.id,
+        streamerId: streamer.id,
+        economicProfileId: profile.id,
         closesAt: new Date(Date.now() + 3600_000),
       }),
     );
+    return market.id;
+  }
 
-    expect(created.status).toBe("DRAFT");
+  it("creates outcomes and lists them by marketId", async () => {
+    const marketId = await createMarket();
 
-    const found = await uow.run(async (tx: DbTx) =>
-      new DrizzleMarketRepository(tx).findById(created.id),
+    await uow.run(async (tx: DbTx) =>
+      new DrizzleOutcomeRepository(tx).create({
+        id: randomUUID(),
+        marketId,
+        code: "TEAM_A",
+        label: "Team A",
+      }),
     );
-    expect(found?.id).toBe(created.id);
-
-    const byMatch = await uow.run(async (tx: DbTx) =>
-      new DrizzleMarketRepository(tx).findByMatchId(fx.matchId),
+    await uow.run(async (tx: DbTx) =>
+      new DrizzleOutcomeRepository(tx).create({
+        id: randomUUID(),
+        marketId,
+        code: "TEAM_B",
+        label: "Team B",
+      }),
     );
-    expect(byMatch.some((m) => m.id === created.id)).toBe(true);
+
+    const listed = await uow.run(async (tx: DbTx) =>
+      new DrizzleOutcomeRepository(tx).listByMarketId(marketId),
+    );
+    expect(listed).toHaveLength(2);
+    expect(listed.map((o) => o.code).sort()).toEqual(["TEAM_A", "TEAM_B"]);
   });
 });
