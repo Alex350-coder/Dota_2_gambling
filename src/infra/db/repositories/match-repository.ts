@@ -35,6 +35,11 @@ export class DrizzleMatchRepository implements MatchRepository {
     return row ? this.toMatch(row) : null;
   }
 
+  async list(): Promise<Match[]> {
+    const rows = await this.tx.select().from(matches);
+    return rows.map((row) => this.toMatch(row));
+  }
+
   async listByTournamentId(tournamentId: string): Promise<Match[]> {
     const rows = await this.tx.select().from(matches).where(eq(matches.tournamentId, tournamentId));
     return rows.map((row) => this.toMatch(row));

@@ -25,6 +25,7 @@ export interface CreateMarketInput {
 export interface MarketRepository {
   create(input: CreateMarketInput): Promise<Market>;
   findById(id: string): Promise<Market | null>;
+  list(): Promise<Market[]>;
   findByMatchId(matchId: string): Promise<Market[]>;
   updateStatus(id: string, status: MarketStatus): Promise<Market>;
   /** OPEN markets whose `closesAt` is at or before `now` — feeds the close scheduler (T-408). */

@@ -12,3 +12,12 @@ export { DrizzleEmailVerificationTokenRepository } from "./repositories/email-ve
 export { DrizzlePasswordResetTokenRepository } from "./repositories/password-reset-token-repository";
 export { DrizzleLoginAttemptRepository } from "./repositories/login-attempt-repository";
 export { DrizzleMfaRecoveryCodeRepository } from "./repositories/mfa-recovery-code-repository";
+export { DrizzleGameRepository } from "./repositories/game-repository";
+export { DrizzleTournamentRepository } from "./repositories/tournament-repository";
+export { DrizzleTeamRepository } from "./repositories/team-repository";
+export { DrizzleMatchRepository } from "./repositories/match-repository";
+export { DrizzleMarketTypeRepository } from "./repositories/market-type-repository";
+export { DrizzleEconomicProfileRepository } from "./repositories/economic-profile-repository";
+export { DrizzleStreamerRepository } from "./repositories/streamer-repository";
+export { DrizzleMarketRepository } from "./repositories/market-repository";
+export { DrizzleOutcomeRepository } from "./repositories/outcome-repository";

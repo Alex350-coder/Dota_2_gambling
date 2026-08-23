@@ -32,6 +32,7 @@ export interface CreateStreamerChannelInput {
 export interface StreamerRepository {
   create(input: CreateStreamerInput): Promise<Streamer>;
   findById(id: string): Promise<Streamer | null>;
+  list(): Promise<Streamer[]>;
   updateDefaultCommissionBps(id: string, defaultCommissionBps: number): Promise<Streamer>;
   createChannel(input: CreateStreamerChannelInput): Promise<StreamerChannel>;
   listChannels(streamerId: string): Promise<StreamerChannel[]>;

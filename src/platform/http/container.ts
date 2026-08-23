@@ -16,6 +16,11 @@ import {
   DrizzlePasswordResetTokenRepository,
   DrizzleLoginAttemptRepository,
   DrizzleMfaRecoveryCodeRepository,
+  DrizzleGameRepository,
+  DrizzleMatchRepository,
+  DrizzleMarketRepository,
+  DrizzleStreamerRepository,
+  DrizzleOutcomeRepository,
   RateLimiter,
 } from "@/infra/db";
 import { loadConfig, type Config } from "@/platform/config";
@@ -33,6 +38,17 @@ import {
   RedeemMfaRecoveryCodeUseCase,
   VerifyMfaUseCase,
 } from "@/application/identity";
+import {
+  ListGamesUseCase,
+  GetGameUseCase,
+  ListMatchesUseCase,
+  GetMatchUseCase,
+  ListMarketsUseCase,
+  GetMarketUseCase,
+  ListStreamersUseCase,
+  GetStreamerUseCase,
+  GetMarketBookUseCase,
+} from "@/application/catalog";
 
 export interface Container {
   readonly config: Config;
@@ -54,6 +70,20 @@ export interface Container {
   readonly verifyMfa: VerifyMfaUseCase<DbTx>;
   readonly disableMfa: DisableMfaUseCase<DbTx>;
   readonly redeemMfaRecoveryCode: RedeemMfaRecoveryCodeUseCase<DbTx>;
+  readonly games: (tx: DbTx) => DrizzleGameRepository;
+  readonly matches: (tx: DbTx) => DrizzleMatchRepository;
+  readonly markets: (tx: DbTx) => DrizzleMarketRepository;
+  readonly streamers: (tx: DbTx) => DrizzleStreamerRepository;
+  readonly outcomes: (tx: DbTx) => DrizzleOutcomeRepository;
+  readonly listGames: ListGamesUseCase<DbTx>;
+  readonly getGame: GetGameUseCase<DbTx>;
+  readonly listMatches: ListMatchesUseCase<DbTx>;
+  readonly getMatch: GetMatchUseCase<DbTx>;
+  readonly listMarkets: ListMarketsUseCase<DbTx>;
+  readonly getMarket: GetMarketUseCase<DbTx>;
+  readonly listStreamers: ListStreamersUseCase<DbTx>;
+  readonly getStreamer: GetStreamerUseCase<DbTx>;
+  readonly getMarketBook: GetMarketBookUseCase<DbTx>;
 }
 
 let cached: Container | undefined;
@@ -90,6 +120,11 @@ export function getContainer(): Container {
   const resetTokens = (tx: DbTx) => new DrizzlePasswordResetTokenRepository(tx);
   const loginAttempts = (tx: DbTx) => new DrizzleLoginAttemptRepository(tx);
   const recoveryCodes = (tx: DbTx) => new DrizzleMfaRecoveryCodeRepository(tx);
+  const games = (tx: DbTx) => new DrizzleGameRepository(tx);
+  const matches = (tx: DbTx) => new DrizzleMatchRepository(tx);
+  const markets = (tx: DbTx) => new DrizzleMarketRepository(tx);
+  const streamers = (tx: DbTx) => new DrizzleStreamerRepository(tx);
+  const outcomes = (tx: DbTx) => new DrizzleOutcomeRepository(tx);
 
   const sessionService = new SessionService<DbTx>({
     uow,
@@ -151,6 +186,20 @@ export function getContainer(): Container {
     verifyMfa: new VerifyMfaUseCase<DbTx>(mfaDeps),
     disableMfa: new DisableMfaUseCase<DbTx>(mfaDeps),
     redeemMfaRecoveryCode: new RedeemMfaRecoveryCodeUseCase<DbTx>(mfaDeps),
+    games,
+    matches,
+    markets,
+    streamers,
+    outcomes,
+    listGames: new ListGamesUseCase<DbTx>({ uow, games }),
+    getGame: new GetGameUseCase<DbTx>({ uow, games }),
+    listMatches: new ListMatchesUseCase<DbTx>({ uow, matches }),
+    getMatch: new GetMatchUseCase<DbTx>({ uow, matches }),
+    listMarkets: new ListMarketsUseCase<DbTx>({ uow, markets }),
+    getMarket: new GetMarketUseCase<DbTx>({ uow, markets }),
+    listStreamers: new ListStreamersUseCase<DbTx>({ uow, streamers }),
+    getStreamer: new GetStreamerUseCase<DbTx>({ uow, streamers }),
+    getMarketBook: new GetMarketBookUseCase<DbTx>({ uow, markets, outcomes }),
   };
 
   return cached;

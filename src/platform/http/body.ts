@@ -22,3 +22,18 @@ export async function parseJsonBody<T>(request: Request, schema: ZodType<T>): Pr
   }
   return result.data;
 }
+
+/**
+ * Parses and validates a request's query string against a `.strict()` schema
+ * (Validation.md) — the GET-request counterpart to `parseJsonBody`.
+ */
+export function parseQuery<T>(request: Request, schema: ZodType<T>): T {
+  const raw = Object.fromEntries(new URL(request.url).searchParams);
+  const result = schema.safeParse(raw);
+  if (!result.success) {
+    throw new DomainError("VALIDATION_FAILED", "query parameters failed validation", {
+      details: { issues: result.error.issues.map((issue) => issue.path.join(".")) },
+    });
+  }
+  return result.data;
+}

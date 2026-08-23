@@ -32,6 +32,11 @@ export class DrizzleMarketRepository implements MarketRepository {
     return row ? this.toMarket(row) : null;
   }
 
+  async list(): Promise<Market[]> {
+    const rows = await this.tx.select().from(markets);
+    return rows.map((row) => this.toMarket(row));
+  }
+
   async findByMatchId(matchId: string): Promise<Market[]> {
     const rows = await this.tx.select().from(markets).where(eq(markets.matchId, matchId));
     return rows.map((row) => this.toMarket(row));

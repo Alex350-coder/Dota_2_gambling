@@ -34,6 +34,11 @@ export class DrizzleStreamerRepository implements StreamerRepository {
     return row ? this.toStreamer(row) : null;
   }
 
+  async list(): Promise<Streamer[]> {
+    const rows = await this.tx.select().from(streamers);
+    return rows.map((row) => this.toStreamer(row));
+  }
+
   async updateDefaultCommissionBps(id: string, defaultCommissionBps: number): Promise<Streamer> {
     const [row] = await this.tx
       .update(streamers)

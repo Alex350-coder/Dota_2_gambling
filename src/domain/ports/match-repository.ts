@@ -30,6 +30,7 @@ export interface AddMatchParticipantInput {
 export interface MatchRepository {
   create(input: CreateMatchInput): Promise<Match>;
   findById(id: string): Promise<Match | null>;
+  list(): Promise<Match[]>;
   listByTournamentId(tournamentId: string): Promise<Match[]>;
   addParticipant(input: AddMatchParticipantInput): Promise<MatchParticipant>;
   listParticipants(matchId: string): Promise<MatchParticipant[]>;
