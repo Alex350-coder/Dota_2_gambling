@@ -131,6 +131,7 @@ export const streamers = pgTable(
       .notNull()
       .references(() => users.id),
     displayName: text("display_name").notNull(),
+    defaultCommissionBps: integer("default_commission_bps").notNull().default(2000),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("idx_streamers_user_id").on(table.userId)],

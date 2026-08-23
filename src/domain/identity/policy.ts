@@ -9,7 +9,8 @@ export type Action =
   | "user:read"
   | "mfa:manage"
   | "audit:read"
-  | "catalog:manage";
+  | "catalog:manage"
+  | "streamer:manage";
 
 export interface Actor {
   readonly roles: readonly Role[];
@@ -38,6 +39,9 @@ const POLICY: Readonly<Record<Action, ActionRule>> = {
   // economic profiles, markets, streamers) have no per-user owner — only
   // ADMIN may manage them.
   "catalog:manage": { roles: [], anyOwner: ["ADMIN"] },
+  // Streamer catalog records (commission rate, channels) are admin-managed,
+  // not self-service by the linked user — same shape as catalog:manage.
+  "streamer:manage": { roles: [], anyOwner: ["ADMIN"] },
 };
 
 /**

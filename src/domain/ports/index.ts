@@ -56,6 +56,13 @@ export type {
   PersistedEconomicProfile,
   CreateEconomicProfileInput,
 } from "./economic-profile-repository";
+export type {
+  StreamerRepository,
+  Streamer,
+  CreateStreamerInput,
+  StreamerChannel,
+  CreateStreamerChannelInput,
+} from "./streamer-repository";
 export type { EconomicModel } from "./economic-model";
 export type { PaymentProvider, PaymentReference } from "./payment-provider";
 export type {

@@ -188,3 +188,40 @@ export function economicProfileCreatedEvent(
     entityId: economicProfileId,
   };
 }
+
+/** Catalog event builders (T-409). */
+export function streamerCreatedEvent(actorId: string, streamerId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "STREAMER_CREATED",
+    entityType: "streamer",
+    entityId: streamerId,
+  };
+}
+
+export function streamerCommissionUpdatedEvent(
+  actorId: string,
+  streamerId: string,
+): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "STREAMER_COMMISSION_UPDATED",
+    entityType: "streamer",
+    entityId: streamerId,
+  };
+}
+
+export function streamerChannelCreatedEvent(
+  actorId: string,
+  streamerChannelId: string,
+): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "STREAMER_CHANNEL_CREATED",
+    entityType: "streamer_channel",
+    entityId: streamerChannelId,
+  };
+}
