@@ -60,6 +60,8 @@ export const sessions = pgTable("sessions", {
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  /** Last time this session re-proved MFA — step-up freshness check (T-412). */
+  mfaVerifiedAt: timestamp("mfa_verified_at", { withTimezone: true }),
 });
 
 export const emailVerificationTokens = pgTable("email_verification_tokens", {

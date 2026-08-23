@@ -55,6 +55,10 @@ export class DrizzleSessionRepository implements SessionRepository {
     await this.tx.update(sessions).set({ revokedAt }).where(eq(sessions.id, id));
   }
 
+  async markMfaVerified(id: string, mfaVerifiedAt: Date): Promise<void> {
+    await this.tx.update(sessions).set({ mfaVerifiedAt }).where(eq(sessions.id, id));
+  }
+
   async revokeAllForUser(userId: string, revokedAt: Date, exceptSessionId?: string): Promise<void> {
     const scope = exceptSessionId
       ? and(
@@ -78,5 +82,6 @@ function toSessionRecord(row: typeof sessions.$inferSelect): SessionRecord {
     lastSeenAt: row.lastSeenAt,
     expiresAt: row.expiresAt,
     revokedAt: row.revokedAt,
+    mfaVerifiedAt: row.mfaVerifiedAt,
   };
 }

@@ -1,0 +1,10 @@
+title = "gitleaks config for Dota_2_gambling"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-safe high-entropy fixture strings in tests, not real secrets"
+paths = [
+  '''tests/.*\.test\.ts$''',
+]

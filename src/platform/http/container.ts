@@ -1,5 +1,6 @@
 import { CryptoIdGenerator } from "@/infra/id-generator";
 import { SystemClock } from "@/infra/clock";
+import type { Clock } from "@/domain/ports";
 import { Argon2PasswordHasher } from "@/infra/crypto";
 import { TotpMfaProvider } from "@/infra/crypto";
 import { OutboxMailProvider } from "@/infra/mail";
@@ -16,6 +17,15 @@ import {
   DrizzlePasswordResetTokenRepository,
   DrizzleLoginAttemptRepository,
   DrizzleMfaRecoveryCodeRepository,
+  DrizzleGameRepository,
+  DrizzleTournamentRepository,
+  DrizzleTeamRepository,
+  DrizzleMatchRepository,
+  DrizzleMarketTypeRepository,
+  DrizzleEconomicProfileRepository,
+  DrizzleMarketRepository,
+  DrizzleStreamerRepository,
+  DrizzleOutcomeRepository,
   RateLimiter,
 } from "@/infra/db";
 import { loadConfig, type Config } from "@/platform/config";
@@ -33,9 +43,35 @@ import {
   RedeemMfaRecoveryCodeUseCase,
   VerifyMfaUseCase,
 } from "@/application/identity";
+import {
+  ListGamesUseCase,
+  GetGameUseCase,
+  ListMatchesUseCase,
+  GetMatchUseCase,
+  ListMarketsUseCase,
+  GetMarketUseCase,
+  ListStreamersUseCase,
+  GetStreamerUseCase,
+  GetMarketBookUseCase,
+  CreateGameUseCase,
+  CreateGameModeUseCase,
+  CreateTournamentUseCase,
+  CreateTeamUseCase,
+  CreateMatchUseCase,
+  AddMatchParticipantUseCase,
+  CreateMarketTypeUseCase,
+  CreateEconomicProfileUseCase,
+  CreateStreamerUseCase,
+  UpdateStreamerCommissionUseCase,
+  CreateStreamerChannelUseCase,
+  CreateMarketUseCase,
+  TransitionMarketUseCase,
+  CloseMarketsUseCase,
+} from "@/application/catalog";
 
 export interface Container {
   readonly config: Config;
+  readonly clock: Clock;
   readonly uow: DrizzleUnitOfWork;
   readonly users: (tx: DbTx) => DrizzleUserRepository;
   readonly userRoles: (tx: DbTx) => DrizzleUserRoleRepository;
@@ -54,6 +90,38 @@ export interface Container {
   readonly verifyMfa: VerifyMfaUseCase<DbTx>;
   readonly disableMfa: DisableMfaUseCase<DbTx>;
   readonly redeemMfaRecoveryCode: RedeemMfaRecoveryCodeUseCase<DbTx>;
+  readonly games: (tx: DbTx) => DrizzleGameRepository;
+  readonly tournaments: (tx: DbTx) => DrizzleTournamentRepository;
+  readonly teams: (tx: DbTx) => DrizzleTeamRepository;
+  readonly matches: (tx: DbTx) => DrizzleMatchRepository;
+  readonly marketTypes: (tx: DbTx) => DrizzleMarketTypeRepository;
+  readonly economicProfiles: (tx: DbTx) => DrizzleEconomicProfileRepository;
+  readonly markets: (tx: DbTx) => DrizzleMarketRepository;
+  readonly streamers: (tx: DbTx) => DrizzleStreamerRepository;
+  readonly outcomes: (tx: DbTx) => DrizzleOutcomeRepository;
+  readonly listGames: ListGamesUseCase<DbTx>;
+  readonly getGame: GetGameUseCase<DbTx>;
+  readonly listMatches: ListMatchesUseCase<DbTx>;
+  readonly getMatch: GetMatchUseCase<DbTx>;
+  readonly listMarkets: ListMarketsUseCase<DbTx>;
+  readonly getMarket: GetMarketUseCase<DbTx>;
+  readonly listStreamers: ListStreamersUseCase<DbTx>;
+  readonly getStreamer: GetStreamerUseCase<DbTx>;
+  readonly getMarketBook: GetMarketBookUseCase<DbTx>;
+  readonly createGame: CreateGameUseCase<DbTx>;
+  readonly createGameMode: CreateGameModeUseCase<DbTx>;
+  readonly createTournament: CreateTournamentUseCase<DbTx>;
+  readonly createTeam: CreateTeamUseCase<DbTx>;
+  readonly createMatch: CreateMatchUseCase<DbTx>;
+  readonly addMatchParticipant: AddMatchParticipantUseCase<DbTx>;
+  readonly createMarketType: CreateMarketTypeUseCase<DbTx>;
+  readonly createEconomicProfile: CreateEconomicProfileUseCase<DbTx>;
+  readonly createStreamer: CreateStreamerUseCase<DbTx>;
+  readonly updateStreamerCommission: UpdateStreamerCommissionUseCase<DbTx>;
+  readonly createStreamerChannel: CreateStreamerChannelUseCase<DbTx>;
+  readonly createMarket: CreateMarketUseCase<DbTx>;
+  readonly transitionMarket: TransitionMarketUseCase<DbTx>;
+  readonly closeMarkets: CloseMarketsUseCase<DbTx>;
 }
 
 let cached: Container | undefined;
@@ -90,6 +158,23 @@ export function getContainer(): Container {
   const resetTokens = (tx: DbTx) => new DrizzlePasswordResetTokenRepository(tx);
   const loginAttempts = (tx: DbTx) => new DrizzleLoginAttemptRepository(tx);
   const recoveryCodes = (tx: DbTx) => new DrizzleMfaRecoveryCodeRepository(tx);
+  const games = (tx: DbTx) => new DrizzleGameRepository(tx);
+  const tournaments = (tx: DbTx) => new DrizzleTournamentRepository(tx);
+  const teams = (tx: DbTx) => new DrizzleTeamRepository(tx);
+  const matches = (tx: DbTx) => new DrizzleMatchRepository(tx);
+  const marketTypes = (tx: DbTx) => new DrizzleMarketTypeRepository(tx);
+  const economicProfiles = (tx: DbTx) => new DrizzleEconomicProfileRepository(tx);
+  const markets = (tx: DbTx) => new DrizzleMarketRepository(tx);
+  const streamers = (tx: DbTx) => new DrizzleStreamerRepository(tx);
+  const outcomes = (tx: DbTx) => new DrizzleOutcomeRepository(tx);
+
+  const transitionMarket = new TransitionMarketUseCase<DbTx>({
+    uow,
+    markets,
+    outcomes,
+    clock,
+    audit,
+  });
 
   const sessionService = new SessionService<DbTx>({
     uow,
@@ -106,6 +191,7 @@ export function getContainer(): Container {
     uow,
     users,
     recoveryCodes,
+    sessions,
     mfa,
     passwordHasher,
     ids,
@@ -116,6 +202,7 @@ export function getContainer(): Container {
 
   cached = {
     config,
+    clock,
     uow,
     users,
     userRoles,
@@ -151,6 +238,62 @@ export function getContainer(): Container {
     verifyMfa: new VerifyMfaUseCase<DbTx>(mfaDeps),
     disableMfa: new DisableMfaUseCase<DbTx>(mfaDeps),
     redeemMfaRecoveryCode: new RedeemMfaRecoveryCodeUseCase<DbTx>(mfaDeps),
+    games,
+    tournaments,
+    teams,
+    matches,
+    marketTypes,
+    economicProfiles,
+    markets,
+    streamers,
+    outcomes,
+    listGames: new ListGamesUseCase<DbTx>({ uow, games }),
+    getGame: new GetGameUseCase<DbTx>({ uow, games }),
+    listMatches: new ListMatchesUseCase<DbTx>({ uow, matches }),
+    getMatch: new GetMatchUseCase<DbTx>({ uow, matches }),
+    listMarkets: new ListMarketsUseCase<DbTx>({ uow, markets }),
+    getMarket: new GetMarketUseCase<DbTx>({ uow, markets }),
+    listStreamers: new ListStreamersUseCase<DbTx>({ uow, streamers }),
+    getStreamer: new GetStreamerUseCase<DbTx>({ uow, streamers }),
+    getMarketBook: new GetMarketBookUseCase<DbTx>({ uow, markets, outcomes }),
+    createGame: new CreateGameUseCase<DbTx>({ uow, games, ids, audit }),
+    createGameMode: new CreateGameModeUseCase<DbTx>({ uow, games, ids, audit }),
+    createTournament: new CreateTournamentUseCase<DbTx>({ uow, games, tournaments, ids, audit }),
+    createTeam: new CreateTeamUseCase<DbTx>({ uow, games, teams, ids, audit }),
+    createMatch: new CreateMatchUseCase<DbTx>({ uow, tournaments, matches, ids, audit }),
+    addMatchParticipant: new AddMatchParticipantUseCase<DbTx>({ uow, matches, teams, audit }),
+    createMarketType: new CreateMarketTypeUseCase<DbTx>({ uow, marketTypes, ids, audit }),
+    createEconomicProfile: new CreateEconomicProfileUseCase<DbTx>({
+      uow,
+      economicProfiles,
+      ids,
+      audit,
+    }),
+    createStreamer: new CreateStreamerUseCase<DbTx>({ uow, users, streamers, ids, audit }),
+    updateStreamerCommission: new UpdateStreamerCommissionUseCase<DbTx>({
+      uow,
+      streamers,
+      audit,
+    }),
+    createStreamerChannel: new CreateStreamerChannelUseCase<DbTx>({
+      uow,
+      streamers,
+      ids,
+      audit,
+    }),
+    createMarket: new CreateMarketUseCase<DbTx>({
+      uow,
+      matches,
+      marketTypes,
+      streamers,
+      economicProfiles,
+      markets,
+      outcomes,
+      ids,
+      audit,
+    }),
+    transitionMarket,
+    closeMarkets: new CloseMarketsUseCase<DbTx>({ uow, markets, transitionMarket, clock }),
   };
 
   return cached;

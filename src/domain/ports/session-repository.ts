@@ -8,6 +8,7 @@ export interface SessionRecord {
   readonly lastSeenAt: Date;
   readonly expiresAt: Date;
   readonly revokedAt: Date | null;
+  readonly mfaVerifiedAt: Date | null;
 }
 
 export interface CreateSessionInput {
@@ -33,6 +34,8 @@ export interface SessionRepository {
   listActiveByUserId(userId: string, now: Date): Promise<readonly SessionRecord[]>;
   touch(id: string, lastSeenAt: Date): Promise<void>;
   revoke(id: string, revokedAt: Date): Promise<void>;
+  /** Records a fresh MFA re-verification on this session (T-412 step-up auth). */
+  markMfaVerified(id: string, mfaVerifiedAt: Date): Promise<void>;
   /**
    * Revokes every non-revoked session for a user (password reset/change,
    * Security.md §5). `exceptSessionId` lets a caller keep its own session alive

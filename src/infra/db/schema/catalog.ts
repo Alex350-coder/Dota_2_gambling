@@ -23,6 +23,8 @@ export const marketStatus = pgEnum("market_status", [
   "VOID",
 ]);
 
+export const outcomeCardinality = pgEnum("outcome_cardinality", ["BINARY", "N_ARY"]);
+
 export const games = pgTable("games", {
   id: uuid("id").primaryKey().defaultRandom(),
   slug: text("slug").notNull().unique(),
@@ -106,6 +108,7 @@ export const marketTypes = pgTable("market_types", {
   id: uuid("id").primaryKey().defaultRandom(),
   code: text("code").notNull().unique(),
   name: text("name").notNull(),
+  outcomeCardinality: outcomeCardinality("outcome_cardinality").notNull().default("BINARY"),
 });
 
 export const economicProfiles = pgTable("economic_profiles", {
@@ -128,6 +131,7 @@ export const streamers = pgTable(
       .notNull()
       .references(() => users.id),
     displayName: text("display_name").notNull(),
+    defaultCommissionBps: integer("default_commission_bps").notNull().default(2000),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("idx_streamers_user_id").on(table.userId)],

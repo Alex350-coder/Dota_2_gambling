@@ -14,9 +14,9 @@ export async function POST(request: Request): Promise<Response> {
       const body = await parseJsonBody(request, mfaVerifySchema);
       const container = getContainer();
       const token = sessionTokenFromRequest(request, container.config);
-      const { userId } = await authorizeSelf(container, token, "mfa:manage");
+      const { userId, session } = await authorizeSelf(container, token, "mfa:manage");
 
-      await container.verifyMfa.execute({ userId, code: body.code });
+      await container.verifyMfa.execute({ userId, code: body.code, sessionId: session.id });
       return NextResponse.json({}, { status: 200 });
     },
   });

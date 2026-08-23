@@ -29,7 +29,41 @@ export type { BetOrderRepository } from "./bet-order-repository";
 export type { LedgerWriter, LedgerPostInput, LedgerPostEntry } from "./ledger-writer";
 export type { WalletRepository, Wallet } from "./wallet-repository";
 export type { AllocationRepository, MatchAllocation } from "./allocation-repository";
-export type { MarketRepository, Market } from "./market-repository";
+export type { MarketRepository, Market, CreateMarketInput } from "./market-repository";
+export type { OutcomeRepository, Outcome, CreateOutcomeInput } from "./outcome-repository";
+export type {
+  GameRepository,
+  Game,
+  CreateGameInput,
+  GameMode,
+  CreateGameModeInput,
+} from "./game-repository";
+export type {
+  TournamentRepository,
+  Tournament,
+  CreateTournamentInput,
+} from "./tournament-repository";
+export type { TeamRepository, Team, CreateTeamInput } from "./team-repository";
+export type {
+  MatchRepository,
+  Match,
+  CreateMatchInput,
+  MatchParticipant,
+  AddMatchParticipantInput,
+} from "./match-repository";
+export type { MarketTypeRepository, PersistedMarketType } from "./market-type-repository";
+export type {
+  EconomicProfileRepository,
+  PersistedEconomicProfile,
+  CreateEconomicProfileInput,
+} from "./economic-profile-repository";
+export type {
+  StreamerRepository,
+  Streamer,
+  CreateStreamerInput,
+  StreamerChannel,
+  CreateStreamerChannelInput,
+} from "./streamer-repository";
 export type { EconomicModel } from "./economic-model";
 export type { PaymentProvider, PaymentReference } from "./payment-provider";
 export type {

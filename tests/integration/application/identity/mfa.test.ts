@@ -5,6 +5,7 @@ import { createDb, createPool } from "@/infra/db/client";
 import { DrizzleUnitOfWork, type DbTx } from "@/infra/db/uow";
 import { DrizzleUserRepository } from "@/infra/db/repositories/user-repository";
 import { DrizzleMfaRecoveryCodeRepository } from "@/infra/db/repositories/mfa-recovery-code-repository";
+import { DrizzleSessionRepository } from "@/infra/db/repositories/session-repository";
 import { CryptoIdGenerator } from "@/infra/id-generator";
 import { SystemClock } from "@/infra/clock";
 import { Argon2PasswordHasher } from "@/infra/crypto/password";
@@ -34,6 +35,7 @@ describe("MFA enrol/verify/disable/recovery", () => {
     uow,
     users: (tx: DbTx) => new DrizzleUserRepository(tx),
     recoveryCodes: (tx: DbTx) => new DrizzleMfaRecoveryCodeRepository(tx),
+    sessions: (tx: DbTx) => new DrizzleSessionRepository(tx),
     mfa,
     passwordHasher,
     ids,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toMinor } from "../money/types";
-import { assertTransition, canTransition } from "./market-state";
+import { assertMarketAcceptingOrders, assertTransition, canTransition } from "./market-state";
 
 const NOW = new Date("2026-01-10T00:00:00.000Z");
 const FUTURE = new Date("2026-02-01T00:00:00.000Z");
@@ -160,5 +160,33 @@ describe("assertTransition (Market)", () => {
     expect(() => {
       assertTransition("VOID", "SETTLED", { actor: "SYSTEM" });
     }).toThrow(expect.objectContaining({ code: "INVALID_STATE_TRANSITION" }));
+  });
+});
+
+describe("assertMarketAcceptingOrders", () => {
+  it("does not throw for an OPEN market strictly before closesAt", () => {
+    expect(() => {
+      assertMarketAcceptingOrders({ status: "OPEN", closesAt: FUTURE }, NOW);
+    }).not.toThrow();
+  });
+
+  it("throws MARKET_CLOSED for an OPEN market at or past closesAt", () => {
+    expect(() => {
+      assertMarketAcceptingOrders({ status: "OPEN", closesAt: FUTURE }, FUTURE);
+    }).toThrow(expect.objectContaining({ code: "MARKET_CLOSED" }));
+  });
+
+  it("throws MARKET_SUSPENDED for a suspended market", () => {
+    expect(() => {
+      assertMarketAcceptingOrders({ status: "SUSPENDED", closesAt: FUTURE }, NOW);
+    }).toThrow(expect.objectContaining({ code: "MARKET_SUSPENDED" }));
+  });
+
+  it("throws MARKET_CLOSED for any non-OPEN, non-SUSPENDED status", () => {
+    for (const status of ["DRAFT", "CLOSED", "SETTLING", "SETTLED", "CANCELLED", "VOID"] as const) {
+      expect(() => {
+        assertMarketAcceptingOrders({ status, closesAt: FUTURE }, NOW);
+      }).toThrow(expect.objectContaining({ code: "MARKET_CLOSED" }));
+    }
   });
 });

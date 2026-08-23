@@ -94,3 +94,159 @@ export function mfaRecoveryCodeRedeemedEvent(userId: string): AuditEventInput {
     entityId: userId,
   };
 }
+
+/**
+ * Catalog event builders (T-401, T-402). Every catalog admin mutation writes
+ * exactly one `audit_events` row through the same shape (T-414).
+ */
+export function gameCreatedEvent(actorId: string, gameId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "GAME_CREATED",
+    entityType: "game",
+    entityId: gameId,
+  };
+}
+
+export function gameModeCreatedEvent(actorId: string, gameModeId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "GAME_MODE_CREATED",
+    entityType: "game_mode",
+    entityId: gameModeId,
+  };
+}
+
+export function tournamentCreatedEvent(actorId: string, tournamentId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "TOURNAMENT_CREATED",
+    entityType: "tournament",
+    entityId: tournamentId,
+  };
+}
+
+export function teamCreatedEvent(actorId: string, teamId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "TEAM_CREATED",
+    entityType: "team",
+    entityId: teamId,
+  };
+}
+
+export function matchCreatedEvent(actorId: string, matchId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "MATCH_CREATED",
+    entityType: "match",
+    entityId: matchId,
+  };
+}
+
+/**
+ * `match_participants` has no single-column id (its PK is the
+ * `(match_id, team_id)` pair) and `audit_events.entity_id` is a `uuid`
+ * column, so this event is keyed on `matchId` — `teamId` is recoverable via
+ * `match_participants` itself, not stored redundantly in the audit row.
+ */
+export function matchParticipantAddedEvent(actorId: string, matchId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "MATCH_PARTICIPANT_ADDED",
+    entityType: "match_participant",
+    entityId: matchId,
+  };
+}
+
+/** Catalog event builders (T-404, T-405). */
+export function marketTypeCreatedEvent(actorId: string, marketTypeId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "MARKET_TYPE_CREATED",
+    entityType: "market_type",
+    entityId: marketTypeId,
+  };
+}
+
+export function economicProfileCreatedEvent(
+  actorId: string,
+  economicProfileId: string,
+): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "ECONOMIC_PROFILE_CREATED",
+    entityType: "economic_profile",
+    entityId: economicProfileId,
+  };
+}
+
+/** Catalog event builders (T-409). */
+export function streamerCreatedEvent(actorId: string, streamerId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "STREAMER_CREATED",
+    entityType: "streamer",
+    entityId: streamerId,
+  };
+}
+
+export function streamerCommissionUpdatedEvent(
+  actorId: string,
+  streamerId: string,
+): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "STREAMER_COMMISSION_UPDATED",
+    entityType: "streamer",
+    entityId: streamerId,
+  };
+}
+
+export function streamerChannelCreatedEvent(
+  actorId: string,
+  streamerChannelId: string,
+): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "STREAMER_CHANNEL_CREATED",
+    entityType: "streamer_channel",
+    entityId: streamerChannelId,
+  };
+}
+
+/** Catalog event builders (T-406). */
+export function marketCreatedEvent(actorId: string, marketId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "MARKET_CREATED",
+    entityType: "market",
+    entityId: marketId,
+  };
+}
+
+/** Catalog event builders (T-407, T-408). `actorId` is `null` for scheduler-driven transitions. */
+export function marketStatusChangedEvent(
+  actorId: string | null,
+  marketId: string,
+): AuditEventInput {
+  return {
+    actorType: actorId === null ? "system" : "user",
+    actorId,
+    action: "MARKET_STATUS_CHANGED",
+    entityType: "market",
+    entityId: marketId,
+  };
+}
