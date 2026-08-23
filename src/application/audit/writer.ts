@@ -164,3 +164,27 @@ export function matchParticipantAddedEvent(actorId: string, matchId: string): Au
     entityId: matchId,
   };
 }
+
+/** Catalog event builders (T-404, T-405). */
+export function marketTypeCreatedEvent(actorId: string, marketTypeId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "MARKET_TYPE_CREATED",
+    entityType: "market_type",
+    entityId: marketTypeId,
+  };
+}
+
+export function economicProfileCreatedEvent(
+  actorId: string,
+  economicProfileId: string,
+): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "ECONOMIC_PROFILE_CREATED",
+    entityType: "economic_profile",
+    entityId: economicProfileId,
+  };
+}

@@ -1,8 +1,12 @@
 import type { MarketType } from "../catalog/market-type";
 
+export interface PersistedMarketType extends MarketType {
+  readonly id: string;
+}
+
 /** `market_types` is an ownerless catalog entity — a plain finder, no ownership scoping. */
 export interface MarketTypeRepository {
-  create(input: MarketType): Promise<MarketType>;
-  findByCode(code: string): Promise<MarketType | null>;
-  list(): Promise<MarketType[]>;
+  create(id: string, input: MarketType): Promise<PersistedMarketType>;
+  findByCode(code: string): Promise<PersistedMarketType | null>;
+  list(): Promise<PersistedMarketType[]>;
 }
