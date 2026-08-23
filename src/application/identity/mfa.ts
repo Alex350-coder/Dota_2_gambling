@@ -6,6 +6,7 @@ import type {
   MfaProvider,
   MfaRecoveryCodeRepository,
   PasswordHasher,
+  SessionRepository,
   UnitOfWork,
   UserRepository,
 } from "@/domain/ports";
@@ -23,6 +24,7 @@ export interface MfaDeps<Tx> {
   readonly uow: UnitOfWork<Tx>;
   readonly users: (tx: Tx) => UserRepository;
   readonly recoveryCodes: (tx: Tx) => MfaRecoveryCodeRepository;
+  readonly sessions: (tx: Tx) => SessionRepository;
   readonly mfa: MfaProvider;
   readonly passwordHasher: PasswordHasher;
   readonly ids: IdGenerator;
@@ -78,9 +80,17 @@ export class EnrollMfaUseCase<Tx> {
 export interface VerifyMfaInput {
   readonly userId: string;
   readonly code: string;
+  /** When provided, marks this session as freshly step-up-verified (T-412). */
+  readonly sessionId?: string;
 }
 
-/** Verifies a TOTP code against the enrolled secret; activates MFA on first success. */
+/**
+ * Verifies a TOTP code against the enrolled secret; activates MFA on first
+ * success (T-308). Every successful verify — first-time or repeat — also
+ * marks the caller's session as freshly step-up-verified when `sessionId` is
+ * given, so the same endpoint doubles as the step-up re-auth flow admin
+ * routes require (T-412).
+ */
 export class VerifyMfaUseCase<Tx> {
   constructor(private readonly deps: MfaDeps<Tx>) {}
 
@@ -104,6 +114,10 @@ export class VerifyMfaUseCase<Tx> {
       if (!user.mfaEnabledAt) {
         await users.activateMfa(input.userId, now);
         await this.deps.audit.record(tx, mfaVerifiedEvent(input.userId));
+      }
+
+      if (input.sessionId !== undefined) {
+        await this.deps.sessions(tx).markMfaVerified(input.sessionId, now);
       }
     });
   }
