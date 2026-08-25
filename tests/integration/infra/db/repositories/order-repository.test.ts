@@ -71,6 +71,74 @@ describe("DrizzleOrderRepository", () => {
     outcomeId = outcomeResult.rows[0].id as string;
   });
 
+  it("creates a bet order for the owner", async () => {
+    const betSlipResult = await pool.query(
+      `INSERT INTO bet_slips (user_id) VALUES ($1) RETURNING id`,
+      [userAId],
+    );
+    const betSlipId = betSlipResult.rows[0].id as string;
+    const now = new Date();
+
+    const created = await uow.run((tx: DbTx) =>
+      new DrizzleOrderRepository(tx, userAId).create({
+        id: randomUUID(),
+        betSlipId,
+        userId: userAId,
+        marketId,
+        outcomeId,
+        currency: "PEN",
+        requestedMinor: toMinor(10000n),
+        matchedMinor: toMinor(0n),
+        unmatchedMinor: toMinor(10000n),
+        releasedMinor: toMinor(0n),
+        oddsNum: 18,
+        oddsDen: 10,
+        commissionBps: 2000,
+        status: "OPEN",
+        idempotencyKey: `key-${randomUUID()}`,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
+
+    expect(created.userId).toBe(userAId);
+    expect(created.requestedMinor).toBe(10000n);
+    expect(created.status).toBe("OPEN");
+  });
+
+  it("refuses to create a bet order for a different owner", async () => {
+    const betSlipResult = await pool.query(
+      `INSERT INTO bet_slips (user_id) VALUES ($1) RETURNING id`,
+      [userAId],
+    );
+    const betSlipId = betSlipResult.rows[0].id as string;
+    const now = new Date();
+
+    await expect(
+      uow.run((tx: DbTx) =>
+        new DrizzleOrderRepository(tx, userBId).create({
+          id: randomUUID(),
+          betSlipId,
+          userId: userAId,
+          marketId,
+          outcomeId,
+          currency: "PEN",
+          requestedMinor: toMinor(10000n),
+          matchedMinor: toMinor(0n),
+          unmatchedMinor: toMinor(10000n),
+          releasedMinor: toMinor(0n),
+          oddsNum: 18,
+          oddsDen: 10,
+          commissionBps: 2000,
+          status: "OPEN",
+          idempotencyKey: `key-${randomUUID()}`,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ),
+    ).rejects.toThrow(DomainError);
+  });
+
   it("returns the owner's order by id", async () => {
     const orderId = await insertBetOrder(userAId);
 

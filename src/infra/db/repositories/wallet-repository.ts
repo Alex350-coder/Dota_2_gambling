@@ -16,10 +16,20 @@ export class DrizzleWalletRepository implements WalletRepository {
       .from(wallets)
       .where(and(eq(wallets.userId, this.ownerId), eq(wallets.currency, currency)));
 
-    if (!row) {
-      return null;
-    }
+    return row ? this.toWallet(row) : null;
+  }
 
+  async findByCurrencyForUpdate(currency: string): Promise<Wallet | null> {
+    const [row] = await this.tx
+      .select()
+      .from(wallets)
+      .where(and(eq(wallets.userId, this.ownerId), eq(wallets.currency, currency)))
+      .for("update");
+
+    return row ? this.toWallet(row) : null;
+  }
+
+  private toWallet(row: typeof wallets.$inferSelect): Wallet {
     return {
       userId: row.userId,
       currency: row.currency,

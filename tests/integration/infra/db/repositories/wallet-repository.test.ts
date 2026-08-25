@@ -79,4 +79,22 @@ describe("DrizzleWalletRepository", () => {
     expect(walletB?.userId).toBe(userBId);
     expect(walletB?.availableMinor).toBe(9000n);
   });
+
+  it("findByCurrencyForUpdate returns the same shape as findByCurrency", async () => {
+    const wallet = await uow.run((tx: DbTx) =>
+      new DrizzleWalletRepository(tx, userAId).findByCurrencyForUpdate("PEN"),
+    );
+
+    expect(wallet).not.toBeNull();
+    expect(wallet?.userId).toBe(userAId);
+    expect(wallet?.availableMinor).toBe(5000n);
+  });
+
+  it("findByCurrencyForUpdate returns null when the owner has no wallet in that currency", async () => {
+    const wallet = await uow.run((tx: DbTx) =>
+      new DrizzleWalletRepository(tx, userAId).findByCurrencyForUpdate("USD"),
+    );
+
+    expect(wallet).toBeNull();
+  });
 });
