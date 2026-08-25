@@ -10,6 +10,11 @@ export function sub(a: Minor, b: Minor): Minor {
   return toMinor(a - b);
 }
 
+/** Signed debit for a ledger entry (`signedAmountMinor` is a plain bigint, not `Minor`). */
+export function negate(amount: Minor): bigint {
+  return 0n - amount;
+}
+
 function toBpsBigInt(bps: number): bigint {
   assertValidBps(bps);
   return BigInt(bps);

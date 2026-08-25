@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  betCancelledEvent,
+  betPlacedEvent,
   emailVerifiedEvent,
   loginSucceededEvent,
   mfaDisabledEvent,
@@ -62,6 +64,36 @@ describe("audit event builders", () => {
     expect(mfaDisabledEvent("user-1")).toMatchObject({ action: "MFA_DISABLED" });
     expect(mfaRecoveryCodeRedeemedEvent("user-1")).toMatchObject({
       action: "MFA_RECOVERY_CODE_REDEEMED",
+    });
+  });
+
+  it("builds a BET_PLACED event scoped to the order entity", () => {
+    expect(betPlacedEvent("user-1", "order-1")).toEqual({
+      actorType: "user",
+      actorId: "user-1",
+      action: "BET_PLACED",
+      entityType: "bet_order",
+      entityId: "order-1",
+    });
+  });
+
+  it("builds a user-actor BET_CANCELLED event", () => {
+    expect(betCancelledEvent("user-1", "order-1")).toEqual({
+      actorType: "user",
+      actorId: "user-1",
+      action: "BET_CANCELLED",
+      entityType: "bet_order",
+      entityId: "order-1",
+    });
+  });
+
+  it("builds a system-actor BET_CANCELLED event for market-close release", () => {
+    expect(betCancelledEvent(null, "order-1")).toEqual({
+      actorType: "system",
+      actorId: null,
+      action: "BET_CANCELLED",
+      entityType: "bet_order",
+      entityId: "order-1",
     });
   });
 });

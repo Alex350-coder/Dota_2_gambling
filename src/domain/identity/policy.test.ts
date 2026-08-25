@@ -59,4 +59,20 @@ describe("can", () => {
   it("denies even an ADMIN from managing another user's MFA settings", () => {
     expect(can({ roles: ["ADMIN"] }, "mfa:manage", { ownerId: "u2" }, "admin1")).toBe(false);
   });
+
+  it("allows a USER to place their own bet", () => {
+    expect(can({ roles: ["USER"] }, "bet:place", { ownerId: "u1" }, "u1")).toBe(true);
+  });
+
+  it("denies a USER placing a bet as another user", () => {
+    expect(can({ roles: ["USER"] }, "bet:place", { ownerId: "u2" }, "u1")).toBe(false);
+  });
+
+  it("allows an ADMIN to read/manage any user's bet for support/audit", () => {
+    expect(can({ roles: ["ADMIN"] }, "bet:manage", { ownerId: "u2" }, "admin1")).toBe(true);
+  });
+
+  it("allows a USER to manage (cancel) their own bet", () => {
+    expect(can({ roles: ["USER"] }, "bet:manage", { ownerId: "u1" }, "u1")).toBe(true);
+  });
 });
