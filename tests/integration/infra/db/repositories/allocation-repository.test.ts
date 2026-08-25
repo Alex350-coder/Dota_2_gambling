@@ -17,6 +17,7 @@ describe("DrizzleAllocationRepository", () => {
   let userCId: string;
   let orderAId: string;
   let orderBId: string;
+  let marketId: string;
 
   async function insertBetOrder(userId: string, marketId: string, outcomeId: string) {
     const betSlipResult = await pool.query(
@@ -63,7 +64,7 @@ describe("DrizzleAllocationRepository", () => {
     userBId = userB.rows[0].id as string;
     userCId = userC.rows[0].id as string;
 
-    const marketId = await seedMarket(pool, userAId);
+    marketId = await seedMarket(pool, userAId);
     const outcomeResult = await pool.query(
       `INSERT INTO outcomes (market_id, code, label) VALUES ($1, 'A', 'Team A') RETURNING id`,
       [marketId],
@@ -104,6 +105,27 @@ describe("DrizzleAllocationRepository", () => {
     );
 
     expect(allocations).toHaveLength(0);
+  });
+
+  it("creates a new match allocation", async () => {
+    const now = new Date();
+    const created = await uow.run((tx: DbTx) =>
+      new DrizzleAllocationRepository(tx, userAId).create({
+        id: randomUUID(),
+        marketId,
+        orderAId,
+        orderBId,
+        sequence: 2n,
+        matchedMinor: 1000n,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
+
+    expect(created.orderAId).toBe(orderAId);
+    expect(created.orderBId).toBe(orderBId);
+    expect(created.matchedMinor).toBe(1000n);
+    expect(created.status).toBe("ACTIVE");
   });
 });
 

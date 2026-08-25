@@ -13,4 +13,12 @@ export interface Wallet {
  */
 export interface WalletRepository {
   findByCurrency(currency: string): Promise<Wallet | null>;
+
+  /**
+   * Locks the wallet row `FOR UPDATE` so a balance precondition check (e.g. `INSUFFICIENT_FUNDS`)
+   * is atomic with the caller's subsequent ledger posting — without this, a raw negative-balance
+   * write would only be caught by the DB's `chk_wallets_available_nonneg` CHECK constraint,
+   * surfacing as an unmapped SQL error instead of a clean DomainError.
+   */
+  findByCurrencyForUpdate(currency: string): Promise<Wallet | null>;
 }

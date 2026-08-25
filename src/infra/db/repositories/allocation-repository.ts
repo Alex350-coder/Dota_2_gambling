@@ -1,6 +1,10 @@
 import { alias } from "drizzle-orm/pg-core";
 import { and, eq, or } from "drizzle-orm";
-import type { AllocationRepository, MatchAllocation } from "@/domain/ports";
+import type {
+  AllocationRepository,
+  CreateMatchAllocationInput,
+  MatchAllocation,
+} from "@/domain/ports";
 import { betOrders, matchAllocations } from "../schema/betting";
 import type { DbTx } from "../uow";
 
@@ -41,5 +45,37 @@ export class DrizzleAllocationRepository implements AllocationRepository {
       createdAt: allocation.createdAt,
       updatedAt: allocation.updatedAt,
     }));
+  }
+
+  async create(input: CreateMatchAllocationInput): Promise<MatchAllocation> {
+    const [row] = await this.tx
+      .insert(matchAllocations)
+      .values({
+        id: input.id,
+        marketId: input.marketId,
+        orderAId: input.orderAId,
+        orderBId: input.orderBId,
+        sequence: input.sequence,
+        matchedMinor: input.matchedMinor,
+        createdAt: input.createdAt,
+        updatedAt: input.updatedAt,
+      })
+      .returning();
+
+    if (!row) {
+      throw new Error("match allocation insert returned no row");
+    }
+
+    return {
+      id: row.id,
+      marketId: row.marketId,
+      orderAId: row.orderAId,
+      orderBId: row.orderBId,
+      sequence: row.sequence,
+      matchedMinor: row.matchedMinor,
+      status: row.status,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
   }
 }
