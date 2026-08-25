@@ -71,3 +71,8 @@ export type {
   ExternalMatchResult,
   MatchResultTrustLevel,
 } from "./match-result-provider";
+export type {
+  IdempotencyKeyRepository,
+  IdempotencyKeyRecord,
+  CreateIdempotencyKeyInput,
+} from "./idempotency-key-repository";

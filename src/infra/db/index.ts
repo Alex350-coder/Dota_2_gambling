@@ -21,3 +21,4 @@ export { DrizzleEconomicProfileRepository } from "./repositories/economic-profil
 export { DrizzleStreamerRepository } from "./repositories/streamer-repository";
 export { DrizzleMarketRepository } from "./repositories/market-repository";
 export { DrizzleOutcomeRepository } from "./repositories/outcome-repository";
+export { DrizzleIdempotencyKeyRepository } from "./repositories/idempotency-key-repository";
