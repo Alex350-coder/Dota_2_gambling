@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { add, mulBps, scaleByRatio, splitFloor, sub } from "./arith";
+import { add, mulBps, negate, scaleByRatio, splitFloor, sub } from "./arith";
 import { toMinor } from "./types";
 
 describe("add", () => {
@@ -24,6 +24,16 @@ describe("sub", () => {
 
   it("throws when the result would be negative", () => {
     expect(() => sub(toMinor(10n), toMinor(20n))).toThrow(RangeError);
+  });
+});
+
+describe("negate", () => {
+  it("returns a negative signed bigint for a positive Minor amount", () => {
+    expect(negate(toMinor(100n))).toBe(-100n);
+  });
+
+  it("returns zero for a zero amount", () => {
+    expect(negate(toMinor(0n))).toBe(0n);
   });
 });
 

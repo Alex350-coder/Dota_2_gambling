@@ -250,3 +250,25 @@ export function marketStatusChangedEvent(
     entityId: marketId,
   };
 }
+
+/** Betting event builders (T-502, T-510, T-511). */
+export function betPlacedEvent(userId: string, orderId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId: userId,
+    action: "BET_PLACED",
+    entityType: "bet_order",
+    entityId: orderId,
+  };
+}
+
+/** `actorId` is `null` for system-driven cancellations (e.g. market-close release). */
+export function betCancelledEvent(actorId: string | null, orderId: string): AuditEventInput {
+  return {
+    actorType: actorId === null ? "system" : "user",
+    actorId,
+    action: "BET_CANCELLED",
+    entityType: "bet_order",
+    entityId: orderId,
+  };
+}
