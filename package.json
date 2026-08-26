@@ -22,6 +22,7 @@
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run src tooling",
     "test:integration": "vitest run tests/integration",
+    "test:concurrency": "vitest run tests/concurrency",
     "test:db": "vitest run tests/db",
     "test:security": "vitest run tests/security",
     "test:invariants": "vitest run tests/invariants",

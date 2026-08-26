@@ -24,6 +24,17 @@ import type {
 import { betPlacedEvent } from "@/application/audit/writer";
 import { matchIncomingOrder } from "./match";
 
+/**
+ * Reservation + matching share one transaction (T-515): a deadlock/serialization failure from
+ * racing on the market's advisory lock or the book's `FOR UPDATE` scan retries the whole thing,
+ * not just part of it — a partially-applied reservation with no matching attempt would leave
+ * funds locked with no corresponding allocation.
+ */
+const PLACE_ORDER_TX_OPTIONS = {
+  isolation: "READ COMMITTED",
+  retry: { attempts: 3 },
+} as const;
+
 export interface PlaceOrderInput {
   readonly userId: string;
   readonly marketId: string;
@@ -200,6 +211,6 @@ export class PlaceOrderUseCase<Tx> {
         streamerUserId: streamer.userId,
         incoming: created,
       });
-    });
+    }, PLACE_ORDER_TX_OPTIONS);
   }
 }
