@@ -52,11 +52,13 @@ export class DrizzleOrderRepository implements BetOrderRepository {
     return this.toBetOrder(row);
   }
 
+  /** `FOR UPDATE`: every current caller loads an order immediately before mutating it. */
   async findById(id: string): Promise<BetOrder | null> {
     const [row] = await this.tx
       .select()
       .from(betOrders)
-      .where(and(eq(betOrders.id, id), eq(betOrders.userId, this.ownerId)));
+      .where(and(eq(betOrders.id, id), eq(betOrders.userId, this.ownerId)))
+      .for("update");
 
     return row ? this.toBetOrder(row) : null;
   }
