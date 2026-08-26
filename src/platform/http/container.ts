@@ -26,6 +26,9 @@ import {
   DrizzleMarketRepository,
   DrizzleStreamerRepository,
   DrizzleOutcomeRepository,
+  DrizzleOrderRepository,
+  DrizzleBookRepository,
+  LedgerService,
   RateLimiter,
 } from "@/infra/db";
 import { loadConfig, type Config } from "@/platform/config";
@@ -68,6 +71,7 @@ import {
   TransitionMarketUseCase,
   CloseMarketsUseCase,
 } from "@/application/catalog";
+import { releaseUnmatchedOnClose } from "@/application/betting/release-unmatched";
 
 export interface Container {
   readonly config: Config;
@@ -99,6 +103,9 @@ export interface Container {
   readonly markets: (tx: DbTx) => DrizzleMarketRepository;
   readonly streamers: (tx: DbTx) => DrizzleStreamerRepository;
   readonly outcomes: (tx: DbTx) => DrizzleOutcomeRepository;
+  readonly betOrders: (tx: DbTx, ownerId: string) => DrizzleOrderRepository;
+  readonly book: (tx: DbTx) => DrizzleBookRepository;
+  readonly ledger: LedgerService;
   readonly listGames: ListGamesUseCase<DbTx>;
   readonly getGame: GetGameUseCase<DbTx>;
   readonly listMatches: ListMatchesUseCase<DbTx>;
@@ -167,6 +174,9 @@ export function getContainer(): Container {
   const markets = (tx: DbTx) => new DrizzleMarketRepository(tx);
   const streamers = (tx: DbTx) => new DrizzleStreamerRepository(tx);
   const outcomes = (tx: DbTx) => new DrizzleOutcomeRepository(tx);
+  const betOrders = (tx: DbTx, ownerId: string) => new DrizzleOrderRepository(tx, ownerId);
+  const book = (tx: DbTx) => new DrizzleBookRepository(tx);
+  const ledger = new LedgerService(ids, clock);
 
   const transitionMarket = new TransitionMarketUseCase<DbTx>({
     uow,
@@ -174,6 +184,12 @@ export function getContainer(): Container {
     outcomes,
     clock,
     audit,
+    onClosed: (tx, market) =>
+      releaseUnmatchedOnClose(
+        tx,
+        { book, betOrders, economicProfiles, ledger, ids, clock },
+        market,
+      ),
   });
 
   const sessionService = new SessionService<DbTx>({
@@ -247,6 +263,9 @@ export function getContainer(): Container {
     markets,
     streamers,
     outcomes,
+    betOrders,
+    book,
+    ledger,
     listGames: new ListGamesUseCase<DbTx>({ uow, games }),
     getGame: new GetGameUseCase<DbTx>({ uow, games }),
     listMatches: new ListMatchesUseCase<DbTx>({ uow, matches }),

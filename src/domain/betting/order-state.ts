@@ -31,11 +31,23 @@ function isFullyMatched(ctx: BetOrderTransitionContext): boolean {
   return ctx.unmatchedMinor !== undefined && ctx.unmatchedMinor === 0n;
 }
 
+/**
+ * USER-initiated cancellation only applies while the market can still take/hold orders
+ * (`OPEN`/`SUSPENDED`, T-510). SYSTEM-initiated release additionally covers `CLOSED`
+ * (T-511's batch release of unmatched stakes once a market stops accepting new orders).
+ */
 function canCancelViaMarket(ctx: BetOrderTransitionContext): boolean {
-  return (
-    (ctx.actor === "USER" || ctx.actor === "SYSTEM") &&
-    (ctx.marketStatus === "OPEN" || ctx.marketStatus === "SUSPENDED")
-  );
+  if (ctx.actor === "USER") {
+    return ctx.marketStatus === "OPEN" || ctx.marketStatus === "SUSPENDED";
+  }
+  if (ctx.actor === "SYSTEM") {
+    return (
+      ctx.marketStatus === "OPEN" ||
+      ctx.marketStatus === "SUSPENDED" ||
+      ctx.marketStatus === "CLOSED"
+    );
+  }
+  return false;
 }
 
 interface TransitionRule {

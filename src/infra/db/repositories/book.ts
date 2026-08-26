@@ -35,7 +35,28 @@ export class DrizzleBookRepository implements BookRepository {
       .orderBy(asc(betOrders.createdAt), asc(betOrders.id))
       .for("update");
 
-    return rows.map((row) => ({
+    return rows.map((row) => this.toBetOrder(row));
+  }
+
+  async findOpenOrdersByMarket(marketId: string): Promise<readonly BetOrder[]> {
+    const rows = await this.tx
+      .select()
+      .from(betOrders)
+      .where(
+        and(
+          eq(betOrders.marketId, marketId),
+          gt(betOrders.unmatchedMinor, 0n),
+          eq(betOrders.status, "OPEN"),
+        ),
+      )
+      .orderBy(asc(betOrders.createdAt), asc(betOrders.id))
+      .for("update");
+
+    return rows.map((row) => this.toBetOrder(row));
+  }
+
+  private toBetOrder(row: typeof betOrders.$inferSelect): BetOrder {
+    return {
       id: row.id,
       userId: row.userId,
       marketId: row.marketId,
@@ -51,6 +72,6 @@ export class DrizzleBookRepository implements BookRepository {
       idempotencyKey: row.idempotencyKey,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-    }));
+    };
   }
 }
