@@ -28,9 +28,13 @@ import {
   DrizzleOutcomeRepository,
   DrizzleOrderRepository,
   DrizzleBookRepository,
+  DrizzleWalletRepository,
+  DrizzleBetSlipRepository,
+  DrizzleAllocationRepository,
   LedgerService,
   RateLimiter,
 } from "@/infra/db";
+import { pgAdvisoryXactLock } from "@/infra/db/locks";
 import { loadConfig, type Config } from "@/platform/config";
 import { SessionService } from "@/platform/session";
 import {
@@ -72,6 +76,7 @@ import {
   CloseMarketsUseCase,
 } from "@/application/catalog";
 import { releaseUnmatchedOnClose } from "@/application/betting/release-unmatched";
+import { PlaceOrderUseCase } from "@/application/betting/place-order";
 
 export interface Container {
   readonly config: Config;
@@ -105,6 +110,9 @@ export interface Container {
   readonly outcomes: (tx: DbTx) => DrizzleOutcomeRepository;
   readonly betOrders: (tx: DbTx, ownerId: string) => DrizzleOrderRepository;
   readonly book: (tx: DbTx) => DrizzleBookRepository;
+  readonly wallets: (tx: DbTx, ownerId: string) => DrizzleWalletRepository;
+  readonly betSlips: (tx: DbTx, ownerId: string) => DrizzleBetSlipRepository;
+  readonly allocations: (tx: DbTx) => DrizzleAllocationRepository;
   readonly ledger: LedgerService;
   readonly listGames: ListGamesUseCase<DbTx>;
   readonly getGame: GetGameUseCase<DbTx>;
@@ -129,6 +137,7 @@ export interface Container {
   readonly createMarket: CreateMarketUseCase<DbTx>;
   readonly transitionMarket: TransitionMarketUseCase<DbTx>;
   readonly closeMarkets: CloseMarketsUseCase<DbTx>;
+  readonly placeOrder: PlaceOrderUseCase<DbTx>;
 }
 
 let cached: Container | undefined;
@@ -176,6 +185,9 @@ export function getContainer(): Container {
   const outcomes = (tx: DbTx) => new DrizzleOutcomeRepository(tx);
   const betOrders = (tx: DbTx, ownerId: string) => new DrizzleOrderRepository(tx, ownerId);
   const book = (tx: DbTx) => new DrizzleBookRepository(tx);
+  const wallets = (tx: DbTx, ownerId: string) => new DrizzleWalletRepository(tx, ownerId);
+  const betSlips = (tx: DbTx, ownerId: string) => new DrizzleBetSlipRepository(tx, ownerId);
+  const allocations = (tx: DbTx) => new DrizzleAllocationRepository(tx, "");
   const ledger = new LedgerService(ids, clock);
 
   const transitionMarket = new TransitionMarketUseCase<DbTx>({
@@ -265,6 +277,9 @@ export function getContainer(): Container {
     outcomes,
     betOrders,
     book,
+    wallets,
+    betSlips,
+    allocations,
     ledger,
     listGames: new ListGamesUseCase<DbTx>({ uow, games }),
     getGame: new GetGameUseCase<DbTx>({ uow, games }),
@@ -313,6 +328,24 @@ export function getContainer(): Container {
     }),
     transitionMarket,
     closeMarkets: new CloseMarketsUseCase<DbTx>({ uow, markets, transitionMarket, clock }),
+    placeOrder: new PlaceOrderUseCase<DbTx>({
+      uow,
+      markets,
+      outcomes,
+      economicProfiles,
+      streamers,
+      users,
+      wallets,
+      betSlips,
+      betOrders,
+      book,
+      allocations,
+      acquireMarketLock: (tx, marketId) => pgAdvisoryXactLock(tx, `market:${marketId}`),
+      ledger,
+      ids,
+      clock,
+      audit,
+    }),
   };
 
   return cached;
