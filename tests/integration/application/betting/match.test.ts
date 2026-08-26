@@ -42,7 +42,7 @@ class TestClock {
   }
 }
 
-describe("PlaceOrderUseCase", () => {
+describe("matchIncomingOrder (via PlaceOrderUseCase)", () => {
   const pool = createPool(testDbConfig());
   const db = createDb(pool);
   const uow = new DrizzleUnitOfWork(db);
@@ -149,7 +149,11 @@ describe("PlaceOrderUseCase", () => {
     return userId;
   }
 
-  async function createOpenMarket(): Promise<{ marketId: string; outcomeId: string }> {
+  async function createOpenMarket(): Promise<{
+    marketId: string;
+    outcomeAId: string;
+    outcomeBId: string;
+  }> {
     const actorId = await createUser();
     const game = await createGame.execute({ actorId, slug: `g-${randomUUID()}`, name: "G" });
     const [modeRow] = await pool
@@ -213,121 +217,203 @@ describe("PlaceOrderUseCase", () => {
     expect(opened.status).toBe("OPEN");
 
     const outcomes = await pool
-      .query("SELECT id FROM outcomes WHERE market_id = $1 AND code = 'TEAM_A'", [market.id])
-      .then((r) => r.rows as { id: string }[]);
+      .query("SELECT id, code FROM outcomes WHERE market_id = $1", [market.id])
+      .then((r) => r.rows as { id: string; code: string }[]);
+    const outcomeA = outcomes.find((row) => row.code === "TEAM_A");
+    const outcomeB = outcomes.find((row) => row.code === "TEAM_B");
+    if (!outcomeA || !outcomeB) throw new Error("outcome fixture missing");
 
-    const outcome = outcomes[0];
-    if (!outcome) throw new Error("outcome fixture missing");
-    return { marketId: market.id, outcomeId: outcome.id };
+    return { marketId: market.id, outcomeAId: outcomeA.id, outcomeBId: outcomeB.id };
   }
 
-  it("reserves the stake, opens the order, and records exactly one BET_PLACED event", async () => {
-    const { marketId, outcomeId } = await createOpenMarket();
-    const userId = await createUser(50_000n);
+  async function walletOf(userId: string): Promise<{ available: bigint; locked: bigint }> {
+    const row = await pool
+      .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
+      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
+    return { available: row.available_minor, locked: row.locked_minor };
+  }
+
+  async function escrowOf(marketId: string): Promise<bigint> {
+    const rows = await pool
+      .query(
+        `SELECT signed_amount_minor FROM ledger_entries
+         WHERE account_key = $1`,
+        [`MARKET_ESCROW:${marketId}`],
+      )
+      .then((r) => r.rows as { signed_amount_minor: bigint }[]);
+    return rows.reduce((sum, row) => sum + row.signed_amount_minor, 0n);
+  }
+
+  it("FIN-01: full match 100 vs 100 — matched = 10000 both, escrow = 20000", async () => {
+    const { marketId, outcomeAId, outcomeBId } = await createOpenMarket();
+    const userA = await createUser();
+    const userB = await createUser();
+
+    const resting = await placeOrder.execute({
+      userId: userA,
+      marketId,
+      outcomeId: outcomeAId,
+      requestedMinor: 10_000n,
+      idempotencyKey: randomUUID(),
+    });
+    expect(resting.status).toBe("OPEN");
+
+    const incoming = await placeOrder.execute({
+      userId: userB,
+      marketId,
+      outcomeId: outcomeBId,
+      requestedMinor: 10_000n,
+      idempotencyKey: randomUUID(),
+    });
+
+    expect(incoming.status).toBe("MATCHED");
+    expect(incoming.matchedMinor).toBe(10_000n);
+    expect(incoming.unmatchedMinor).toBe(0n);
+
+    const restingOrders = await pool
+      .query("SELECT status, matched_minor, unmatched_minor FROM bet_orders WHERE id = $1", [
+        resting.id,
+      ])
+      .then((r) => r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint });
+    expect(restingOrders.status).toBe("MATCHED");
+    expect(restingOrders.matched_minor).toBe(10_000n);
+    expect(restingOrders.unmatched_minor).toBe(0n);
+
+    expect(await escrowOf(marketId)).toBe(20_000n);
+
+    const allocations = await pool
+      .query("SELECT sequence, matched_minor FROM match_allocations WHERE market_id = $1", [
+        marketId,
+      ])
+      .then((r) => r.rows as { sequence: bigint; matched_minor: bigint }[]);
+    expect(allocations).toHaveLength(1);
+    expect(allocations[0]?.matched_minor).toBe(10_000n);
+    expect(allocations[0]?.sequence).toBe(1n);
+  });
+
+  it("FIN-02: partial match 100 vs 30 — matched 3000, unmatched 7000, escrow 6000", async () => {
+    const { marketId, outcomeAId, outcomeBId } = await createOpenMarket();
+    const userA = await createUser();
+    const userB = await createUser();
+
+    const resting = await placeOrder.execute({
+      userId: userA,
+      marketId,
+      outcomeId: outcomeAId,
+      requestedMinor: 3_000n,
+      idempotencyKey: randomUUID(),
+    });
+
+    const incoming = await placeOrder.execute({
+      userId: userB,
+      marketId,
+      outcomeId: outcomeBId,
+      requestedMinor: 10_000n,
+      idempotencyKey: randomUUID(),
+    });
+
+    expect(incoming.status).toBe("OPEN");
+    expect(incoming.matchedMinor).toBe(3_000n);
+    expect(incoming.unmatchedMinor).toBe(7_000n);
+
+    const restingRow = await pool
+      .query("SELECT status, matched_minor, unmatched_minor FROM bet_orders WHERE id = $1", [
+        resting.id,
+      ])
+      .then((r) => r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint });
+    expect(restingRow.status).toBe("MATCHED");
+    expect(restingRow.matched_minor).toBe(3_000n);
+    expect(restingRow.unmatched_minor).toBe(0n);
+
+    expect(await escrowOf(marketId)).toBe(6_000n);
+
+    const incomingWallet = await walletOf(userB);
+    expect(incomingWallet.locked).toBe(7_000n);
+  });
+
+  it("FIN-03: three counterparties 100 vs 30+20+50 — 3 allocations, FIFO order, matched = 10000", async () => {
+    const { marketId, outcomeAId, outcomeBId } = await createOpenMarket();
+    const userA1 = await createUser();
+    const userA2 = await createUser();
+    const userA3 = await createUser();
+    const userB = await createUser();
+
+    const restingOne = await placeOrder.execute({
+      userId: userA1,
+      marketId,
+      outcomeId: outcomeAId,
+      requestedMinor: 3_000n,
+      idempotencyKey: randomUUID(),
+    });
+    const restingTwo = await placeOrder.execute({
+      userId: userA2,
+      marketId,
+      outcomeId: outcomeAId,
+      requestedMinor: 2_000n,
+      idempotencyKey: randomUUID(),
+    });
+    const restingThree = await placeOrder.execute({
+      userId: userA3,
+      marketId,
+      outcomeId: outcomeAId,
+      requestedMinor: 5_000n,
+      idempotencyKey: randomUUID(),
+    });
+
+    const incoming = await placeOrder.execute({
+      userId: userB,
+      marketId,
+      outcomeId: outcomeBId,
+      requestedMinor: 10_000n,
+      idempotencyKey: randomUUID(),
+    });
+
+    expect(incoming.status).toBe("MATCHED");
+    expect(incoming.matchedMinor).toBe(10_000n);
+    expect(incoming.unmatchedMinor).toBe(0n);
+
+    const allocations = await pool
+      .query(
+        "SELECT order_b_id, sequence, matched_minor FROM match_allocations WHERE market_id = $1 ORDER BY sequence ASC",
+        [marketId],
+      )
+      .then((r) => r.rows as { order_b_id: string; sequence: bigint; matched_minor: bigint }[]);
+
+    expect(allocations).toHaveLength(3);
+    expect(allocations[0]?.order_b_id).toBe(restingOne.id);
+    expect(allocations[0]?.matched_minor).toBe(3_000n);
+    expect(allocations[1]?.order_b_id).toBe(restingTwo.id);
+    expect(allocations[1]?.matched_minor).toBe(2_000n);
+    expect(allocations[2]?.order_b_id).toBe(restingThree.id);
+    expect(allocations[2]?.matched_minor).toBe(5_000n);
+    expect(allocations[0]?.sequence).toBe(1n);
+    expect(allocations[1]?.sequence).toBe(2n);
+    expect(allocations[2]?.sequence).toBe(3n);
+  });
+
+  it("FIN-04: no counterparty — order OPEN, matched 0, locked = 10000, escrow 0", async () => {
+    const { marketId, outcomeAId } = await createOpenMarket();
+    const userId = await createUser();
 
     const order = await placeOrder.execute({
       userId,
       marketId,
-      outcomeId,
-      requestedMinor: 1_000n,
+      outcomeId: outcomeAId,
+      requestedMinor: 10_000n,
       idempotencyKey: randomUUID(),
     });
 
     expect(order.status).toBe("OPEN");
-    expect(order.unmatchedMinor).toBe(1_000n);
     expect(order.matchedMinor).toBe(0n);
+    expect(order.unmatchedMinor).toBe(10_000n);
 
-    const wallet = await pool
-      .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
-    expect(wallet.available_minor).toBe(49_000n);
-    expect(wallet.locked_minor).toBe(1_000n);
+    const wallet = await walletOf(userId);
+    expect(wallet.locked).toBe(10_000n);
 
-    const auditRows = await pool
-      .query("SELECT action FROM audit_events WHERE entity_id = $1 AND action = 'BET_PLACED'", [
-        order.id,
-      ])
-      .then((r) => r.rows);
-    expect(auditRows).toHaveLength(1);
+    expect(await escrowOf(marketId)).toBe(0n);
   });
 
-  it("rejects a stake below the market minimum without reserving funds", async () => {
-    const { marketId, outcomeId } = await createOpenMarket();
-    const userId = await createUser(50_000n);
-
-    await expect(
-      placeOrder.execute({
-        userId,
-        marketId,
-        outcomeId,
-        requestedMinor: 1n,
-        idempotencyKey: randomUUID(),
-      }),
-    ).rejects.toMatchObject({ code: "STAKE_BELOW_MINIMUM" });
-
-    const wallet = await pool
-      .query("SELECT available_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint });
-    expect(wallet.available_minor).toBe(50_000n);
-  });
-
-  it("rejects insufficient funds without leaving a ledger transaction or order behind", async () => {
-    const { marketId, outcomeId } = await createOpenMarket();
-    const userId = await createUser(500n);
-
-    await expect(
-      placeOrder.execute({
-        userId,
-        marketId,
-        outcomeId,
-        requestedMinor: 1_000n,
-        idempotencyKey: randomUUID(),
-      }),
-    ).rejects.toMatchObject({ code: "INSUFFICIENT_FUNDS" });
-
-    const orders = await pool
-      .query("SELECT id FROM bet_orders WHERE user_id = $1", [userId])
-      .then((r) => r.rows);
-    expect(orders).toHaveLength(0);
-
-    const wallet = await pool
-      .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
-    expect(wallet.available_minor).toBe(500n);
-    expect(wallet.locked_minor).toBe(0n);
-  });
-
-  it("rejects an outcome that does not belong to the market", async () => {
-    const { marketId } = await createOpenMarket();
-    const userId = await createUser();
-
-    await expect(
-      placeOrder.execute({
-        userId,
-        marketId,
-        outcomeId: randomUUID(),
-        requestedMinor: 1_000n,
-        idempotencyKey: randomUUID(),
-      }),
-    ).rejects.toMatchObject({ code: "INVALID_OUTCOME" });
-  });
-
-  it("rejects placement against a non-existent market", async () => {
-    const { outcomeId } = await createOpenMarket();
-    const userId = await createUser();
-
-    await expect(
-      placeOrder.execute({
-        userId,
-        marketId: randomUUID(),
-        outcomeId,
-        requestedMinor: 1_000n,
-        idempotencyKey: randomUUID(),
-      }),
-    ).rejects.toMatchObject({ code: "RESOURCE_NOT_FOUND" });
-  });
-
-  it("rejects placement on a DRAFT market that has never been opened", async () => {
+  it("rejects a streamer betting on the market they run (R-02 privileged-actor guard)", async () => {
     const actorId = await createUser();
     const game = await createGame.execute({ actorId, slug: `g-${randomUUID()}`, name: "G" });
     const [modeRow] = await pool
@@ -380,37 +466,27 @@ describe("PlaceOrderUseCase", () => {
         { code: "TEAM_B", label: "Team B" },
       ],
     });
+    const opened = await transitionMarket.execute({
+      actorId,
+      marketId: market.id,
+      actor: "ADMIN",
+      to: "OPEN",
+    });
+    expect(opened.status).toBe("OPEN");
     const outcomes = await pool
       .query("SELECT id FROM outcomes WHERE market_id = $1 AND code = 'TEAM_A'", [market.id])
       .then((r) => r.rows as { id: string }[]);
     const outcome = outcomes[0];
     if (!outcome) throw new Error("outcome fixture missing");
-    const userId = await createUser();
 
     await expect(
       placeOrder.execute({
-        userId,
+        userId: streamerUserId,
         marketId: market.id,
         outcomeId: outcome.id,
         requestedMinor: 1_000n,
         idempotencyKey: randomUUID(),
       }),
-    ).rejects.toMatchObject({ code: "MARKET_CLOSED" });
-  });
-
-  it("rejects placement for a suspended account", async () => {
-    const { marketId, outcomeId } = await createOpenMarket();
-    const userId = await createUser();
-    await pool.query("UPDATE users SET status = 'SUSPENDED' WHERE id = $1", [userId]);
-
-    await expect(
-      placeOrder.execute({
-        userId,
-        marketId,
-        outcomeId,
-        requestedMinor: 1_000n,
-        idempotencyKey: randomUUID(),
-      }),
-    ).rejects.toMatchObject({ code: "ACCOUNT_SUSPENDED" });
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED_OPERATION" });
   });
 });

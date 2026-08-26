@@ -33,4 +33,10 @@ export interface CreateMatchAllocationInput {
 export interface AllocationRepository {
   findByOrderId(orderId: string): Promise<readonly MatchAllocation[]>;
   create(input: CreateMatchAllocationInput): Promise<MatchAllocation>;
+  /**
+   * Next monotonic `sequence` for a market's allocations. Callers must hold the market's
+   * `pgAdvisoryXactLock` before calling this so concurrent matchers can't race on the same
+   * value (RULE-B08 tie-break determinism extends to allocation ordering).
+   */
+  nextSequence(marketId: string): Promise<bigint>;
 }

@@ -5,20 +5,24 @@ import { createBetOrder, type BetOrder } from "@/domain/betting/order";
 import { negate } from "@/domain/money/arith";
 import { ZERO_MINOR, toMinor } from "@/domain/money/types";
 import type {
+  AllocationRepository,
   AuditWriter,
   BetOrderRepository,
   BetSlipRepository,
+  BookRepository,
   Clock,
   EconomicProfileRepository,
   IdGenerator,
   LedgerWriter,
   MarketRepository,
   OutcomeRepository,
+  StreamerRepository,
   UnitOfWork,
   UserRepository,
   WalletRepository,
 } from "@/domain/ports";
 import { betPlacedEvent } from "@/application/audit/writer";
+import { matchIncomingOrder } from "./match";
 
 export interface PlaceOrderInput {
   readonly userId: string;
@@ -33,10 +37,14 @@ export interface PlaceOrderDeps<Tx> {
   readonly markets: (tx: Tx) => MarketRepository;
   readonly outcomes: (tx: Tx) => OutcomeRepository;
   readonly economicProfiles: (tx: Tx) => EconomicProfileRepository;
+  readonly streamers: (tx: Tx) => StreamerRepository;
   readonly users: (tx: Tx) => UserRepository;
   readonly wallets: (tx: Tx, ownerId: string) => WalletRepository;
   readonly betSlips: (tx: Tx, ownerId: string) => BetSlipRepository;
   readonly betOrders: (tx: Tx, ownerId: string) => BetOrderRepository;
+  readonly book: (tx: Tx) => BookRepository;
+  readonly allocations: (tx: Tx) => AllocationRepository;
+  readonly acquireMarketLock: (tx: Tx, marketId: string) => Promise<void>;
   readonly ledger: LedgerWriter<Tx>;
   readonly ids: IdGenerator;
   readonly clock: Clock;
@@ -44,10 +52,10 @@ export interface PlaceOrderDeps<Tx> {
 }
 
 /**
- * Placement preconditions and fund reservation (T-502, T-503). Only reserves the
- * stake and creates the `OPEN` order in this transaction — FIFO matching (T-505..T-509)
- * is wired in on top of this in the same `uow.run` by the caller, not here, so this
- * use-case stays independently testable.
+ * Placement preconditions, fund reservation, and FIFO matching (T-502, T-503, T-505..T-509) —
+ * one `uow.run` transaction: reserve the stake, open the order, then attempt to match it
+ * against the resting book before returning, per MATCHING_ENGINE.md (matching happens inline
+ * with placement, not as a separate async step).
  */
 export class PlaceOrderUseCase<Tx> {
   constructor(private readonly deps: PlaceOrderDeps<Tx>) {}
@@ -179,7 +187,19 @@ export class PlaceOrderUseCase<Tx> {
 
       await this.deps.audit.record(tx, betPlacedEvent(input.userId, created.id));
 
-      return created;
+      const streamer = await this.deps.streamers(tx).findById(market.streamerId);
+      if (!streamer) {
+        throw new DomainError("RESOURCE_NOT_FOUND", "streamer not found", {
+          details: { streamerId: market.streamerId },
+        });
+      }
+
+      return matchIncomingOrder(tx, this.deps, {
+        marketId: market.id,
+        currency: economicProfile.currency,
+        streamerUserId: streamer.userId,
+        incoming: created,
+      });
     });
   }
 }

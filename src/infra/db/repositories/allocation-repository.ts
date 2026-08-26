@@ -1,5 +1,5 @@
 import { alias } from "drizzle-orm/pg-core";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import type {
   AllocationRepository,
   CreateMatchAllocationInput,
@@ -77,5 +77,15 @@ export class DrizzleAllocationRepository implements AllocationRepository {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
+  }
+
+  async nextSequence(marketId: string): Promise<bigint> {
+    const [row] = await this.tx
+      .select({ max: sql<string | null>`max(${matchAllocations.sequence})` })
+      .from(matchAllocations)
+      .where(eq(matchAllocations.marketId, marketId));
+
+    const current = row?.max === null || row?.max === undefined ? 0n : BigInt(row.max);
+    return current + 1n;
   }
 }
