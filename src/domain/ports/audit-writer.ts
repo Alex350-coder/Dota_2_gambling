@@ -7,6 +7,8 @@ export interface AuditEventInput {
   readonly ipHash?: string | null;
   readonly userAgent?: string | null;
   readonly requestId?: string | null;
+  /** Post-mutation state snapshot (`audit_events.after`), e.g. the ledger transaction id a betting event resulted in (T-519). */
+  readonly after?: Record<string, unknown> | null;
 }
 
 /**

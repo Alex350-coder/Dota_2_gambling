@@ -78,8 +78,9 @@ export class CancelOrderUseCase<Tx> {
         marketStatus: market.status,
       });
 
+      let refundTransactionId: string | undefined;
       if (releasedMinor > ZERO_MINOR) {
-        await this.deps.ledger.post(tx, {
+        const refund = await this.deps.ledger.post(tx, {
           id: this.deps.ids.next(),
           kind: "VOID_REFUND",
           referenceType: "bet_order",
@@ -100,10 +101,14 @@ export class CancelOrderUseCase<Tx> {
             },
           ],
         });
+        refundTransactionId = refund.id;
       }
 
       await this.deps.betOrders(tx, order.userId).save(updated);
-      await this.deps.audit.record(tx, betCancelledEvent(input.actorId, order.id));
+      await this.deps.audit.record(
+        tx,
+        betCancelledEvent(input.actorId, order.id, refundTransactionId),
+      );
 
       return updated;
     });

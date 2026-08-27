@@ -144,7 +144,7 @@ export class PlaceOrderUseCase<Tx> {
 
       const orderId = this.deps.ids.next();
 
-      await this.deps.ledger.post(tx, {
+      const reservation = await this.deps.ledger.post(tx, {
         id: this.deps.ids.next(),
         kind: "RESERVE",
         referenceType: "bet_order",
@@ -196,7 +196,7 @@ export class PlaceOrderUseCase<Tx> {
         currency: economicProfile.currency,
       });
 
-      await this.deps.audit.record(tx, betPlacedEvent(input.userId, created.id));
+      await this.deps.audit.record(tx, betPlacedEvent(input.userId, created.id, reservation.id));
 
       const streamer = await this.deps.streamers(tx).findById(market.streamerId);
       if (!streamer) {

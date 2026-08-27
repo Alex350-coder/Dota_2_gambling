@@ -251,24 +251,42 @@ export function marketStatusChangedEvent(
   };
 }
 
-/** Betting event builders (T-502, T-510, T-511). */
-export function betPlacedEvent(userId: string, orderId: string): AuditEventInput {
+/**
+ * Betting event builders (T-502, T-510, T-511). Every betting audit event carries the ledger
+ * transaction id it resulted in (T-519), so a reviewer can jump from an audit row straight to
+ * the exact `ledger_transactions`/`ledger_entries` rows the mutation posted.
+ */
+export function betPlacedEvent(
+  userId: string,
+  orderId: string,
+  ledgerTransactionId: string,
+): AuditEventInput {
   return {
     actorType: "user",
     actorId: userId,
     action: "BET_PLACED",
     entityType: "bet_order",
     entityId: orderId,
+    after: { ledgerTransactionId },
   };
 }
 
-/** `actorId` is `null` for system-driven cancellations (e.g. market-close release). */
-export function betCancelledEvent(actorId: string | null, orderId: string): AuditEventInput {
+/**
+ * `actorId` is `null` for system-driven cancellations (e.g. market-close release).
+ * `ledgerTransactionId` is `undefined` when there was nothing left to refund (the order had no
+ * unmatched stake), so cancelling it posted no ledger transaction at all.
+ */
+export function betCancelledEvent(
+  actorId: string | null,
+  orderId: string,
+  ledgerTransactionId?: string,
+): AuditEventInput {
   return {
     actorType: actorId === null ? "system" : "user",
     actorId,
     action: "BET_CANCELLED",
     entityType: "bet_order",
     entityId: orderId,
+    after: ledgerTransactionId ? { ledgerTransactionId } : null,
   };
 }

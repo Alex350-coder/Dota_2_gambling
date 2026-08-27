@@ -67,23 +67,25 @@ describe("audit event builders", () => {
     });
   });
 
-  it("builds a BET_PLACED event scoped to the order entity", () => {
-    expect(betPlacedEvent("user-1", "order-1")).toEqual({
+  it("builds a BET_PLACED event scoped to the order entity, carrying the ledger transaction id", () => {
+    expect(betPlacedEvent("user-1", "order-1", "ledger-tx-1")).toEqual({
       actorType: "user",
       actorId: "user-1",
       action: "BET_PLACED",
       entityType: "bet_order",
       entityId: "order-1",
+      after: { ledgerTransactionId: "ledger-tx-1" },
     });
   });
 
-  it("builds a user-actor BET_CANCELLED event", () => {
-    expect(betCancelledEvent("user-1", "order-1")).toEqual({
+  it("builds a user-actor BET_CANCELLED event carrying the refund ledger transaction id", () => {
+    expect(betCancelledEvent("user-1", "order-1", "ledger-tx-2")).toEqual({
       actorType: "user",
       actorId: "user-1",
       action: "BET_CANCELLED",
       entityType: "bet_order",
       entityId: "order-1",
+      after: { ledgerTransactionId: "ledger-tx-2" },
     });
   });
 
@@ -94,6 +96,7 @@ describe("audit event builders", () => {
       action: "BET_CANCELLED",
       entityType: "bet_order",
       entityId: "order-1",
+      after: null,
     });
   });
 });

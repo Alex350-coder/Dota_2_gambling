@@ -13,6 +13,7 @@ export class DrizzleAuditWriter implements AuditWriter<DbTx> {
       ipHash: input.ipHash ?? null,
       userAgent: input.userAgent ?? null,
       requestId: input.requestId ?? null,
+      after: input.after ?? null,
     });
   }
 }
