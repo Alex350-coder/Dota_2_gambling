@@ -31,6 +31,7 @@ import { TransitionMarketUseCase } from "@/application/catalog/transition-market
 import { PlaceOrderUseCase } from "@/application/betting/place-order";
 import { testDbConfig } from "../../helpers/test-db-config";
 import { resetAndMigrate } from "../../helpers/reset-db";
+import { toBigIntRow } from "../../helpers/pg-bigint";
 
 class SystemClock {
   now(): Date {
@@ -255,7 +256,9 @@ describe("PlaceOrderUseCase concurrency (CC-07)", () => {
 
     const allocations = await pool
       .query("SELECT matched_minor FROM match_allocations WHERE market_id = $1", [marketId])
-      .then((r) => r.rows as { matched_minor: bigint }[]);
+      .then((r) =>
+        (r.rows as { matched_minor: bigint }[]).map((row) => toBigIntRow(row, ["matched_minor"])),
+      );
     const totalMatched = allocations.reduce((sum, row) => sum + row.matched_minor, 0n);
     expect(totalMatched).toBeLessThanOrEqual(5_000n);
   });
@@ -280,7 +283,11 @@ describe("PlaceOrderUseCase concurrency (CC-07)", () => {
 
     const wallets = await pool
       .query("SELECT available_minor FROM wallets WHERE user_id = ANY($1::uuid[])", [users])
-      .then((r) => r.rows as { available_minor: bigint }[]);
+      .then((r) =>
+        (r.rows as { available_minor: bigint }[]).map((row) =>
+          toBigIntRow(row, ["available_minor"]),
+        ),
+      );
     expect(wallets.every((wallet) => wallet.available_minor >= 0n)).toBe(true);
   });
 });

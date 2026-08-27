@@ -34,6 +34,7 @@ import { TransitionMarketUseCase } from "@/application/catalog/transition-market
 import { PlaceOrderUseCase } from "@/application/betting/place-order";
 import { testDbConfig } from "../../helpers/test-db-config";
 import { resetAndMigrate } from "../../helpers/reset-db";
+import { toBigIntRow } from "../../helpers/pg-bigint";
 
 process.env.APP_URL ??= "https://app.example.test";
 process.env.ENCRYPTION_KEY ??= "0".repeat(48);
@@ -315,7 +316,12 @@ describe("Financial scenarios (FIN-12, FIN-13, FIN-16, FIN-19, FIN-21)", () => {
 
     const wallet = await pool
       .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
+      .then((r) =>
+        toBigIntRow(r.rows[0] as { available_minor: bigint; locked_minor: bigint }, [
+          "available_minor",
+          "locked_minor",
+        ]),
+      );
     expect(wallet.locked_minor).toBe(0n);
     expect(wallet.available_minor).toBe(100_000n);
   });
@@ -381,10 +387,10 @@ describe("Financial scenarios (FIN-12, FIN-13, FIN-16, FIN-19, FIN-21)", () => {
 
     const walletA = await pool
       .query("SELECT available_minor FROM wallets WHERE user_id = $1", [userA])
-      .then((r) => r.rows[0] as { available_minor: bigint });
+      .then((r) => toBigIntRow(r.rows[0] as { available_minor: bigint }, ["available_minor"]));
     const walletB = await pool
       .query("SELECT available_minor FROM wallets WHERE user_id = $1", [userB])
-      .then((r) => r.rows[0] as { available_minor: bigint });
+      .then((r) => toBigIntRow(r.rows[0] as { available_minor: bigint }, ["available_minor"]));
     expect(walletA.available_minor).toBe(45_000n);
     expect(walletB.available_minor).toBe(50_000n);
 

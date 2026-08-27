@@ -31,6 +31,7 @@ import { TransitionMarketUseCase } from "@/application/catalog/transition-market
 import { PlaceOrderUseCase } from "@/application/betting/place-order";
 import { testDbConfig } from "../../../helpers/test-db-config";
 import { resetAndMigrate } from "../../../helpers/reset-db";
+import { toBigIntRow } from "../../../helpers/pg-bigint";
 
 class TestClock {
   constructor(private current: Date) {}
@@ -229,7 +230,12 @@ describe("matchIncomingOrder (via PlaceOrderUseCase)", () => {
   async function walletOf(userId: string): Promise<{ available: bigint; locked: bigint }> {
     const row = await pool
       .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
+      .then((r) =>
+        toBigIntRow(r.rows[0] as { available_minor: bigint; locked_minor: bigint }, [
+          "available_minor",
+          "locked_minor",
+        ]),
+      );
     return { available: row.available_minor, locked: row.locked_minor };
   }
 
@@ -240,7 +246,11 @@ describe("matchIncomingOrder (via PlaceOrderUseCase)", () => {
          WHERE account_key = $1`,
         [`MARKET_ESCROW:${marketId}`],
       )
-      .then((r) => r.rows as { signed_amount_minor: bigint }[]);
+      .then((r) =>
+        (r.rows as { signed_amount_minor: bigint }[]).map((row) =>
+          toBigIntRow(row, ["signed_amount_minor"]),
+        ),
+      );
     return rows.reduce((sum, row) => sum + row.signed_amount_minor, 0n);
   }
 
@@ -274,7 +284,12 @@ describe("matchIncomingOrder (via PlaceOrderUseCase)", () => {
       .query("SELECT status, matched_minor, unmatched_minor FROM bet_orders WHERE id = $1", [
         resting.id,
       ])
-      .then((r) => r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint });
+      .then((r) =>
+        toBigIntRow(
+          r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint },
+          ["matched_minor", "unmatched_minor"],
+        ),
+      );
     expect(restingOrders.status).toBe("MATCHED");
     expect(restingOrders.matched_minor).toBe(10_000n);
     expect(restingOrders.unmatched_minor).toBe(0n);
@@ -285,7 +300,11 @@ describe("matchIncomingOrder (via PlaceOrderUseCase)", () => {
       .query("SELECT sequence, matched_minor FROM match_allocations WHERE market_id = $1", [
         marketId,
       ])
-      .then((r) => r.rows as { sequence: bigint; matched_minor: bigint }[]);
+      .then((r) =>
+        (r.rows as { sequence: bigint; matched_minor: bigint }[]).map((row) =>
+          toBigIntRow(row, ["sequence", "matched_minor"]),
+        ),
+      );
     expect(allocations).toHaveLength(1);
     expect(allocations[0]?.matched_minor).toBe(10_000n);
     expect(allocations[0]?.sequence).toBe(1n);
@@ -320,7 +339,12 @@ describe("matchIncomingOrder (via PlaceOrderUseCase)", () => {
       .query("SELECT status, matched_minor, unmatched_minor FROM bet_orders WHERE id = $1", [
         resting.id,
       ])
-      .then((r) => r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint });
+      .then((r) =>
+        toBigIntRow(
+          r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint },
+          ["matched_minor", "unmatched_minor"],
+        ),
+      );
     expect(restingRow.status).toBe("MATCHED");
     expect(restingRow.matched_minor).toBe(3_000n);
     expect(restingRow.unmatched_minor).toBe(0n);
@@ -377,7 +401,11 @@ describe("matchIncomingOrder (via PlaceOrderUseCase)", () => {
         "SELECT order_b_id, sequence, matched_minor FROM match_allocations WHERE market_id = $1 ORDER BY sequence ASC",
         [marketId],
       )
-      .then((r) => r.rows as { order_b_id: string; sequence: bigint; matched_minor: bigint }[]);
+      .then((r) =>
+        (r.rows as { order_b_id: string; sequence: bigint; matched_minor: bigint }[]).map((row) =>
+          toBigIntRow(row, ["sequence", "matched_minor"]),
+        ),
+      );
 
     expect(allocations).toHaveLength(3);
     expect(allocations[0]?.order_b_id).toBe(restingOne.id);

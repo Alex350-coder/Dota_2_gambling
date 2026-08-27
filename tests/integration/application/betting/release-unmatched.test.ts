@@ -32,6 +32,7 @@ import { PlaceOrderUseCase } from "@/application/betting/place-order";
 import { releaseUnmatchedOnClose } from "@/application/betting/release-unmatched";
 import { testDbConfig } from "../../../helpers/test-db-config";
 import { resetAndMigrate } from "../../../helpers/reset-db";
+import { toBigIntRow } from "../../../helpers/pg-bigint";
 
 class TestClock {
   constructor(private current: Date) {}
@@ -271,14 +272,16 @@ describe("releaseUnmatchedOnClose", () => {
         "SELECT status, matched_minor, unmatched_minor, released_minor FROM bet_orders WHERE id = $1",
         [order.id],
       )
-      .then(
-        (r) =>
+      .then((r) =>
+        toBigIntRow(
           r.rows[0] as {
             status: string;
             matched_minor: bigint;
             unmatched_minor: bigint;
             released_minor: bigint;
           },
+          ["matched_minor", "unmatched_minor", "released_minor"],
+        ),
       );
     expect(orderRow.status).toBe("CANCELLED");
     expect(orderRow.unmatched_minor).toBe(0n);
@@ -286,7 +289,12 @@ describe("releaseUnmatchedOnClose", () => {
 
     const wallet = await pool
       .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
+      .then((r) =>
+        toBigIntRow(r.rows[0] as { available_minor: bigint; locked_minor: bigint }, [
+          "available_minor",
+          "locked_minor",
+        ]),
+      );
     expect(wallet.available_minor).toBe(100_000n);
     expect(wallet.locked_minor).toBe(0n);
   });
@@ -331,7 +339,12 @@ describe("releaseUnmatchedOnClose", () => {
       .query("SELECT status, matched_minor, unmatched_minor FROM bet_orders WHERE id = $1", [
         resting.id,
       ])
-      .then((r) => r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint });
+      .then((r) =>
+        toBigIntRow(
+          r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint },
+          ["matched_minor", "unmatched_minor"],
+        ),
+      );
     expect(restingRow.status).toBe("MATCHED");
     expect(restingRow.unmatched_minor).toBe(0n);
 
@@ -340,14 +353,16 @@ describe("releaseUnmatchedOnClose", () => {
         "SELECT status, matched_minor, unmatched_minor, released_minor FROM bet_orders WHERE id = $1",
         [incoming.id],
       )
-      .then(
-        (r) =>
+      .then((r) =>
+        toBigIntRow(
           r.rows[0] as {
             status: string;
             matched_minor: bigint;
             unmatched_minor: bigint;
             released_minor: bigint;
           },
+          ["matched_minor", "unmatched_minor", "released_minor"],
+        ),
       );
     expect(incomingRow.status).toBe("CANCELLED");
     expect(incomingRow.matched_minor).toBe(3_000n);
@@ -356,7 +371,12 @@ describe("releaseUnmatchedOnClose", () => {
 
     const walletB = await pool
       .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userB])
-      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
+      .then((r) =>
+        toBigIntRow(r.rows[0] as { available_minor: bigint; locked_minor: bigint }, [
+          "available_minor",
+          "locked_minor",
+        ]),
+      );
     expect(walletB.available_minor).toBe(97_000n);
     expect(walletB.locked_minor).toBe(3_000n);
   });

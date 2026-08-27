@@ -32,6 +32,7 @@ import { PlaceOrderUseCase } from "@/application/betting/place-order";
 import { CancelOrderUseCase } from "@/application/betting/cancel-order";
 import { testDbConfig } from "../../helpers/test-db-config";
 import { resetAndMigrate } from "../../helpers/reset-db";
+import { toBigIntRow } from "../../helpers/pg-bigint";
 
 class SystemClock {
   now(): Date {
@@ -266,7 +267,12 @@ describe("PlaceOrderUseCase/CancelOrderUseCase concurrency (CC-01, CC-02, CC-03)
 
       const wallet = await pool
         .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
-        .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
+        .then((r) =>
+          toBigIntRow(r.rows[0] as { available_minor: bigint; locked_minor: bigint }, [
+            "available_minor",
+            "locked_minor",
+          ]),
+        );
       expect(wallet.available_minor).toBeGreaterThanOrEqual(0n);
       expect(wallet.available_minor + wallet.locked_minor).toBe(5_000n);
     }
@@ -301,7 +307,9 @@ describe("PlaceOrderUseCase/CancelOrderUseCase concurrency (CC-01, CC-02, CC-03)
 
       const allocations = await pool
         .query("SELECT matched_minor FROM match_allocations WHERE market_id = $1", [marketId])
-        .then((r) => r.rows as { matched_minor: bigint }[]);
+        .then((r) =>
+          (r.rows as { matched_minor: bigint }[]).map((row) => toBigIntRow(row, ["matched_minor"])),
+        );
       const totalMatched = allocations.reduce((sum, row) => sum + row.matched_minor, 0n);
       expect(totalMatched).toBe(counterparty.requestedMinor);
 
@@ -309,7 +317,12 @@ describe("PlaceOrderUseCase/CancelOrderUseCase concurrency (CC-01, CC-02, CC-03)
         .query("SELECT matched_minor, unmatched_minor FROM bet_orders WHERE id = $1", [
           counterparty.id,
         ])
-        .then((r) => r.rows[0] as { matched_minor: bigint; unmatched_minor: bigint });
+        .then((r) =>
+          toBigIntRow(r.rows[0] as { matched_minor: bigint; unmatched_minor: bigint }, [
+            "matched_minor",
+            "unmatched_minor",
+          ]),
+        );
       expect(counterpartyRow.matched_minor).toBe(totalMatched);
       expect(counterpartyRow.unmatched_minor).toBe(0n);
     }
@@ -352,14 +365,16 @@ describe("PlaceOrderUseCase/CancelOrderUseCase concurrency (CC-01, CC-02, CC-03)
           "SELECT requested_minor, matched_minor, unmatched_minor, released_minor FROM bet_orders WHERE id = $1",
           [order.id],
         )
-        .then(
-          (r) =>
+        .then((r) =>
+          toBigIntRow(
             r.rows[0] as {
               requested_minor: bigint;
               matched_minor: bigint;
               unmatched_minor: bigint;
               released_minor: bigint;
             },
+            ["requested_minor", "matched_minor", "unmatched_minor", "released_minor"],
+          ),
         );
       expect(row.matched_minor + row.unmatched_minor + row.released_minor).toBe(
         row.requested_minor,

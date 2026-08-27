@@ -31,6 +31,7 @@ import { TransitionMarketUseCase } from "@/application/catalog/transition-market
 import { PlaceOrderUseCase } from "@/application/betting/place-order";
 import { testDbConfig } from "../../../helpers/test-db-config";
 import { resetAndMigrate } from "../../../helpers/reset-db";
+import { toBigIntRow } from "../../../helpers/pg-bigint";
 
 class TestClock {
   constructor(private current: Date) {}
@@ -239,7 +240,12 @@ describe("PlaceOrderUseCase", () => {
 
     const wallet = await pool
       .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
+      .then((r) =>
+        toBigIntRow(r.rows[0] as { available_minor: bigint; locked_minor: bigint }, [
+          "available_minor",
+          "locked_minor",
+        ]),
+      );
     expect(wallet.available_minor).toBe(49_000n);
     expect(wallet.locked_minor).toBe(1_000n);
 
@@ -267,7 +273,7 @@ describe("PlaceOrderUseCase", () => {
 
     const wallet = await pool
       .query("SELECT available_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint });
+      .then((r) => toBigIntRow(r.rows[0] as { available_minor: bigint }, ["available_minor"]));
     expect(wallet.available_minor).toBe(50_000n);
   });
 
@@ -292,7 +298,12 @@ describe("PlaceOrderUseCase", () => {
 
     const wallet = await pool
       .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
+      .then((r) =>
+        toBigIntRow(r.rows[0] as { available_minor: bigint; locked_minor: bigint }, [
+          "available_minor",
+          "locked_minor",
+        ]),
+      );
     expect(wallet.available_minor).toBe(500n);
     expect(wallet.locked_minor).toBe(0n);
   });

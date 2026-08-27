@@ -32,6 +32,7 @@ import { PlaceOrderUseCase } from "@/application/betting/place-order";
 import { CancelOrderUseCase } from "@/application/betting/cancel-order";
 import { testDbConfig } from "../../../helpers/test-db-config";
 import { resetAndMigrate } from "../../../helpers/reset-db";
+import { toBigIntRow } from "../../../helpers/pg-bigint";
 
 class TestClock {
   constructor(private current: Date) {}
@@ -258,7 +259,12 @@ describe("CancelOrderUseCase", () => {
 
     const wallet = await pool
       .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
+      .then((r) =>
+        toBigIntRow(r.rows[0] as { available_minor: bigint; locked_minor: bigint }, [
+          "available_minor",
+          "locked_minor",
+        ]),
+      );
     expect(wallet.available_minor).toBe(100_000n);
     expect(wallet.locked_minor).toBe(0n);
 
@@ -301,7 +307,7 @@ describe("CancelOrderUseCase", () => {
 
     const wallet = await pool
       .query("SELECT locked_minor FROM wallets WHERE user_id = $1", [userB])
-      .then((r) => r.rows[0] as { locked_minor: bigint });
+      .then((r) => toBigIntRow(r.rows[0] as { locked_minor: bigint }, ["locked_minor"]));
     expect(wallet.locked_minor).toBe(3_000n);
   });
 
@@ -329,7 +335,12 @@ describe("CancelOrderUseCase", () => {
       .query("SELECT status, matched_minor, unmatched_minor FROM bet_orders WHERE id = $1", [
         resting.id,
       ])
-      .then((r) => r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint });
+      .then((r) =>
+        toBigIntRow(
+          r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint },
+          ["matched_minor", "unmatched_minor"],
+        ),
+      );
     expect(beforeRow.status).toBe("MATCHED");
 
     await expect(
@@ -340,7 +351,12 @@ describe("CancelOrderUseCase", () => {
       .query("SELECT status, matched_minor, unmatched_minor FROM bet_orders WHERE id = $1", [
         resting.id,
       ])
-      .then((r) => r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint });
+      .then((r) =>
+        toBigIntRow(
+          r.rows[0] as { status: string; matched_minor: bigint; unmatched_minor: bigint },
+          ["matched_minor", "unmatched_minor"],
+        ),
+      );
     expect(afterRow).toEqual(beforeRow);
   });
 
