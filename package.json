@@ -26,6 +26,7 @@
     "test:db": "vitest run tests/db",
     "test:security": "vitest run tests/security",
     "test:invariants": "vitest run tests/invariants",
+    "test:perf": "vitest run tests/perf",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/db-migrate.ts",
