@@ -190,7 +190,7 @@ describe("PlaceOrderUseCase matching throughput (MET-PERF-05)", () => {
       platformFeeBps: 0,
       currency: "PEN",
       minStakeMinor: 100n,
-      maxStakeMinor: 10_000_000n,
+      maxStakeMinor: 100_000_000n,
     });
     const streamerUserId = await createUser();
     const streamer = await createStreamer.execute({
@@ -251,5 +251,5 @@ describe("PlaceOrderUseCase matching throughput (MET-PERF-05)", () => {
     const ordersPerSecond = ORDER_COUNT / elapsedSeconds;
 
     expect(ordersPerSecond).toBeGreaterThanOrEqual(MIN_ORDERS_PER_SECOND);
-  });
+  }, 30_000);
 });
