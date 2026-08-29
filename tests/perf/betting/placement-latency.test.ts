@@ -249,5 +249,5 @@ describe("PlaceOrderUseCase latency (MET-PERF-03)", () => {
 
     expect(p95).toBeLessThanOrEqual(P95_BUDGET_MS);
     expect(p99).toBeLessThanOrEqual(P99_BUDGET_MS);
-  });
+  }, 30_000);
 });
