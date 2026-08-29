@@ -1,1 +1,1 @@
-export { withIdempotency, type IdempotencyRequest } from "./idempotency";
+export { withIdempotency } from "./idempotency";
