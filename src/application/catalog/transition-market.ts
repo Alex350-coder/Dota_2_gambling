@@ -26,6 +26,12 @@ export interface TransitionMarketDeps<Tx> {
   readonly outcomes: (tx: Tx) => OutcomeRepository;
   readonly clock: Clock;
   readonly audit: AuditWriter<Tx>;
+  /**
+   * Invoked in the same transaction right after a successful transition to `CLOSED`
+   * (T-511's batch release of unmatched stakes, FIN-05). Optional so catalog-only callers
+   * (and tests) that never exercise betting don't need to wire a betting-layer dependency.
+   */
+  readonly onClosed?: (tx: Tx, market: Market) => Promise<void>;
 }
 
 /**
@@ -64,6 +70,11 @@ export class TransitionMarketUseCase<Tx> {
 
       const updated = await markets.updateStatus(market.id, input.to);
       await this.deps.audit.record(tx, marketStatusChangedEvent(input.actorId, market.id));
+
+      if (input.to === "CLOSED" && this.deps.onClosed) {
+        await this.deps.onClosed(tx, updated);
+      }
+
       return updated;
     });
   }

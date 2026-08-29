@@ -127,6 +127,24 @@ describe("DrizzleAllocationRepository", () => {
     expect(created.matchedMinor).toBe(1000n);
     expect(created.status).toBe("ACTIVE");
   });
+
+  it("returns the next sequence after the existing allocation for the market", async () => {
+    const next = await uow.run((tx: DbTx) =>
+      new DrizzleAllocationRepository(tx, userAId).nextSequence(marketId),
+    );
+
+    expect(next).toBe(2n);
+  });
+
+  it("returns 1 for a market with no allocations yet", async () => {
+    const emptyMarketId = await seedMarket(pool, userAId);
+
+    const next = await uow.run((tx: DbTx) =>
+      new DrizzleAllocationRepository(tx, userAId).nextSequence(emptyMarketId),
+    );
+
+    expect(next).toBe(1n);
+  });
 });
 
 async function seedMarket(pool: Pool, streamerUserId: string): Promise<string> {

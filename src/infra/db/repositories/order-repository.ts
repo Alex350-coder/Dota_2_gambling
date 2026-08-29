@@ -1,6 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type { BetOrder } from "@/domain/betting";
-import type { BetOrderRepository, CreateBetOrderInput } from "@/domain/ports";
+import type {
+  BetOrderRepository,
+  CreateBetOrderInput,
+  ListOwnedBetOrdersFilter,
+} from "@/domain/ports";
 import { DomainError } from "@/domain/errors";
 import { toMinor } from "@/domain/money";
 import { betOrders } from "../schema/betting";
@@ -52,13 +56,33 @@ export class DrizzleOrderRepository implements BetOrderRepository {
     return this.toBetOrder(row);
   }
 
+  /** `FOR UPDATE`: every current caller loads an order immediately before mutating it. */
   async findById(id: string): Promise<BetOrder | null> {
     const [row] = await this.tx
       .select()
       .from(betOrders)
-      .where(and(eq(betOrders.id, id), eq(betOrders.userId, this.ownerId)));
+      .where(and(eq(betOrders.id, id), eq(betOrders.userId, this.ownerId)))
+      .for("update");
 
     return row ? this.toBetOrder(row) : null;
+  }
+
+  async listByOwner(filter: ListOwnedBetOrdersFilter): Promise<BetOrder[]> {
+    const conditions = [eq(betOrders.userId, this.ownerId)];
+    if (filter.status) {
+      conditions.push(eq(betOrders.status, filter.status));
+    }
+    if (filter.marketId) {
+      conditions.push(eq(betOrders.marketId, filter.marketId));
+    }
+
+    const rows = await this.tx
+      .select()
+      .from(betOrders)
+      .where(and(...conditions))
+      .orderBy(desc(betOrders.createdAt), desc(betOrders.seq));
+
+    return rows.map((row) => this.toBetOrder(row));
   }
 
   async save(entity: BetOrder): Promise<void> {

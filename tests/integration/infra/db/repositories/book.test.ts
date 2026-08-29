@@ -22,6 +22,7 @@ describe("DrizzleBookRepository", () => {
     outcomeId: string,
     overrides: {
       unmatchedMinor?: number;
+      matchedMinor?: number;
       status?: string;
       createdAt?: string;
       id?: string;
@@ -35,6 +36,7 @@ describe("DrizzleBookRepository", () => {
 
     const id = overrides.id ?? randomUUID();
     const unmatchedMinor = overrides.unmatchedMinor ?? 5000;
+    const matchedMinor = overrides.matchedMinor ?? 5000 - unmatchedMinor;
     const status = overrides.status ?? "OPEN";
     const createdAt = overrides.createdAt ?? new Date().toISOString();
 
@@ -43,7 +45,7 @@ describe("DrizzleBookRepository", () => {
          (id, bet_slip_id, user_id, market_id, outcome_id, currency, requested_minor, matched_minor,
           unmatched_minor, released_minor, odds_num, odds_den, commission_bps, status,
           idempotency_key, created_at)
-       VALUES ($1, $2, $3, $4, $5, 'PEN', 5000, 0, $6, 0, 18, 10, 2000, $7, $8, $9)
+       VALUES ($1, $2, $3, $4, $5, 'PEN', 5000, $6, $7, 0, 18, 10, 2000, $8, $9, $10)
        RETURNING id`,
       [
         id,
@@ -51,6 +53,7 @@ describe("DrizzleBookRepository", () => {
         userId,
         marketId,
         outcomeId,
+        matchedMinor,
         unmatchedMinor,
         status,
         `key-${randomUUID()}`,
@@ -108,7 +111,7 @@ describe("DrizzleBookRepository", () => {
     expect(resting.map((o) => o.id)).toEqual([restingId]);
   });
 
-  it("orders resting orders by (created_at ASC, id ASC) — FIFO with a deterministic tie-break", async () => {
+  it("orders resting orders by (created_at ASC, seq ASC) — FIFO with a deterministic tie-break", async () => {
     const otherUser = await pool.query(
       `INSERT INTO users (email, date_of_birth) VALUES ($1, '1990-01-01') RETURNING id`,
       [`book-owner-c-${randomUUID()}@example.test`],
@@ -116,15 +119,13 @@ describe("DrizzleBookRepository", () => {
     const otherUserId = otherUser.rows[0].id as string;
 
     const sameTimestamp = "2026-01-01T00:00:00.000Z";
-    const idLow = "00000000-0000-0000-0000-000000000001";
-    const idHigh = "00000000-0000-0000-0000-000000000002";
 
-    await insertBetOrder(otherUserId, outcomeBId, {
-      id: idHigh,
+    // Same created_at, so the DB-generated monotonic `seq` (insertion order) is the only
+    // thing that can break the tie deterministically.
+    const insertedFirst = await insertBetOrder(otherUserId, outcomeBId, {
       createdAt: sameTimestamp,
     });
-    await insertBetOrder(otherUserId, outcomeBId, {
-      id: idLow,
+    const insertedSecond = await insertBetOrder(otherUserId, outcomeBId, {
       createdAt: sameTimestamp,
     });
     const earliestId = await insertBetOrder(otherUserId, outcomeBId, {
@@ -135,7 +136,7 @@ describe("DrizzleBookRepository", () => {
       new DrizzleBookRepository(tx).findRestingOrders(marketId, outcomeAId, incomingUserId),
     );
 
-    expect(resting.map((o) => o.id)).toEqual([earliestId, idLow, idHigh]);
+    expect(resting.map((o) => o.id)).toEqual([earliestId, insertedFirst, insertedSecond]);
   });
 });
 

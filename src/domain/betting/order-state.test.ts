@@ -67,6 +67,12 @@ describe("canTransition (BetOrder)", () => {
     );
   });
 
+  it("allows OPEN -> CANCELLED by SYSTEM when market is CLOSED (batch release on close)", () => {
+    expect(canTransition("OPEN", "CANCELLED", { actor: "SYSTEM", marketStatus: "CLOSED" })).toBe(
+      true,
+    );
+  });
+
   it("allows MATCHED -> SETTLED by SYSTEM", () => {
     expect(canTransition("MATCHED", "SETTLED", { actor: "SYSTEM" })).toBe(true);
   });

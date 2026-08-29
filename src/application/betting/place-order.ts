@@ -1,24 +1,38 @@
 import { DomainError } from "@/domain/errors";
-import { assertActiveAccount } from "@/domain/identity/status";
-import { assertMarketAcceptingOrders } from "@/domain/catalog/market-state";
-import { createBetOrder, type BetOrder } from "@/domain/betting/order";
-import { negate } from "@/domain/money/arith";
-import { ZERO_MINOR, toMinor } from "@/domain/money/types";
+import { assertActiveAccount } from "@/domain/identity";
+import { assertMarketAcceptingOrders } from "@/domain/catalog";
+import { createBetOrder, type BetOrder } from "@/domain/betting";
+import { negate, ZERO_MINOR, toMinor } from "@/domain/money";
 import type {
+  AllocationRepository,
   AuditWriter,
   BetOrderRepository,
   BetSlipRepository,
+  BookRepository,
   Clock,
   EconomicProfileRepository,
   IdGenerator,
   LedgerWriter,
   MarketRepository,
   OutcomeRepository,
+  StreamerRepository,
   UnitOfWork,
   UserRepository,
   WalletRepository,
 } from "@/domain/ports";
 import { betPlacedEvent } from "@/application/audit/writer";
+import { matchIncomingOrder } from "./match";
+
+/**
+ * Reservation + matching share one transaction (T-515): a deadlock/serialization failure from
+ * racing on the market's advisory lock or the book's `FOR UPDATE` scan retries the whole thing,
+ * not just part of it — a partially-applied reservation with no matching attempt would leave
+ * funds locked with no corresponding allocation.
+ */
+const PLACE_ORDER_TX_OPTIONS = {
+  isolation: "READ COMMITTED",
+  retry: { attempts: 3 },
+} as const;
 
 export interface PlaceOrderInput {
   readonly userId: string;
@@ -33,10 +47,14 @@ export interface PlaceOrderDeps<Tx> {
   readonly markets: (tx: Tx) => MarketRepository;
   readonly outcomes: (tx: Tx) => OutcomeRepository;
   readonly economicProfiles: (tx: Tx) => EconomicProfileRepository;
+  readonly streamers: (tx: Tx) => StreamerRepository;
   readonly users: (tx: Tx) => UserRepository;
   readonly wallets: (tx: Tx, ownerId: string) => WalletRepository;
   readonly betSlips: (tx: Tx, ownerId: string) => BetSlipRepository;
   readonly betOrders: (tx: Tx, ownerId: string) => BetOrderRepository;
+  readonly book: (tx: Tx) => BookRepository;
+  readonly allocations: (tx: Tx) => AllocationRepository;
+  readonly acquireMarketLock: (tx: Tx, marketId: string) => Promise<void>;
   readonly ledger: LedgerWriter<Tx>;
   readonly ids: IdGenerator;
   readonly clock: Clock;
@@ -44,10 +62,10 @@ export interface PlaceOrderDeps<Tx> {
 }
 
 /**
- * Placement preconditions and fund reservation (T-502, T-503). Only reserves the
- * stake and creates the `OPEN` order in this transaction — FIFO matching (T-505..T-509)
- * is wired in on top of this in the same `uow.run` by the caller, not here, so this
- * use-case stays independently testable.
+ * Placement preconditions, fund reservation, and FIFO matching (T-502, T-503, T-505..T-509) —
+ * one `uow.run` transaction: reserve the stake, open the order, then attempt to match it
+ * against the resting book before returning, per MATCHING_ENGINE.md (matching happens inline
+ * with placement, not as a separate async step).
  */
 export class PlaceOrderUseCase<Tx> {
   constructor(private readonly deps: PlaceOrderDeps<Tx>) {}
@@ -125,7 +143,7 @@ export class PlaceOrderUseCase<Tx> {
 
       const orderId = this.deps.ids.next();
 
-      await this.deps.ledger.post(tx, {
+      const reservation = await this.deps.ledger.post(tx, {
         id: this.deps.ids.next(),
         kind: "RESERVE",
         referenceType: "bet_order",
@@ -177,9 +195,21 @@ export class PlaceOrderUseCase<Tx> {
         currency: economicProfile.currency,
       });
 
-      await this.deps.audit.record(tx, betPlacedEvent(input.userId, created.id));
+      await this.deps.audit.record(tx, betPlacedEvent(input.userId, created.id, reservation.id));
 
-      return created;
-    });
+      const streamer = await this.deps.streamers(tx).findById(market.streamerId);
+      if (!streamer) {
+        throw new DomainError("RESOURCE_NOT_FOUND", "streamer not found", {
+          details: { streamerId: market.streamerId },
+        });
+      }
+
+      return matchIncomingOrder(tx, this.deps, {
+        marketId: market.id,
+        currency: economicProfile.currency,
+        streamerUserId: streamer.userId,
+        incoming: created,
+      });
+    }, PLACE_ORDER_TX_OPTIONS);
   }
 }

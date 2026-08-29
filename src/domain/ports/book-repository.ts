@@ -12,4 +12,10 @@ export interface BookRepository {
     outcomeId: string,
     excludeUserId: string,
   ): Promise<readonly BetOrder[]>;
+  /**
+   * Every still-`OPEN` order on a market with a nonzero unmatched remainder, across all
+   * outcomes and users — feeds the batch release run on market close (T-511). `FOR UPDATE`
+   * for the same reason as `findRestingOrders`: the caller mutates every row it reads.
+   */
+  findOpenOrdersByMarket(marketId: string): Promise<readonly BetOrder[]>;
 }

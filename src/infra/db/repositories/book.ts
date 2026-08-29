@@ -7,10 +7,11 @@ import type { DbTx } from "../uow";
 
 /**
  * Cross-user FIFO scan: opposing-outcome, other-user, still-unmatched, `OPEN` orders on one
- * market, ordered `(created_at ASC, id ASC)` — the tie-break is load-bearing determinism
- * (RULE-B08) for same-timestamp orders. Backed by the partial `book_idx` index defined in
- * `0007_betting.sql`. `FOR UPDATE` locks every returned row so the matching engine can safely
- * mutate them within the same transaction.
+ * market, ordered `(created_at ASC, seq ASC)` — `seq` is a DB-generated monotonic sequence
+ * (0018_bet_orders_seq.sql) used as the tie-break because `created_at` is app-clock, millisecond
+ * resolution and can collide; `seq` always reflects true insertion order (RULE-B08). Backed by
+ * the partial `book_idx` index. `FOR UPDATE` locks every returned row so the matching engine can
+ * safely mutate them within the same transaction.
  */
 export class DrizzleBookRepository implements BookRepository {
   constructor(private readonly tx: DbTx) {}
@@ -32,10 +33,31 @@ export class DrizzleBookRepository implements BookRepository {
           eq(betOrders.status, "OPEN"),
         ),
       )
-      .orderBy(asc(betOrders.createdAt), asc(betOrders.id))
+      .orderBy(asc(betOrders.createdAt), asc(betOrders.seq))
       .for("update");
 
-    return rows.map((row) => ({
+    return rows.map((row) => this.toBetOrder(row));
+  }
+
+  async findOpenOrdersByMarket(marketId: string): Promise<readonly BetOrder[]> {
+    const rows = await this.tx
+      .select()
+      .from(betOrders)
+      .where(
+        and(
+          eq(betOrders.marketId, marketId),
+          gt(betOrders.unmatchedMinor, 0n),
+          eq(betOrders.status, "OPEN"),
+        ),
+      )
+      .orderBy(asc(betOrders.createdAt), asc(betOrders.seq))
+      .for("update");
+
+    return rows.map((row) => this.toBetOrder(row));
+  }
+
+  private toBetOrder(row: typeof betOrders.$inferSelect): BetOrder {
+    return {
       id: row.id,
       userId: row.userId,
       marketId: row.marketId,
@@ -51,6 +73,6 @@ export class DrizzleBookRepository implements BookRepository {
       idempotencyKey: row.idempotencyKey,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-    }));
+    };
   }
 }

@@ -14,9 +14,12 @@ import { DrizzleOutcomeRepository } from "@/infra/db/repositories/outcome-reposi
 import { DrizzleWalletRepository } from "@/infra/db/repositories/wallet-repository";
 import { DrizzleBetSlipRepository } from "@/infra/db/repositories/bet-slip-repository";
 import { DrizzleOrderRepository } from "@/infra/db/repositories/order-repository";
+import { DrizzleBookRepository } from "@/infra/db/repositories/book";
+import { DrizzleAllocationRepository } from "@/infra/db/repositories/allocation-repository";
 import { LedgerService } from "@/infra/db/ledger";
 import { DrizzleAuditWriter } from "@/infra/db/audit-writer";
 import { CryptoIdGenerator } from "@/infra/id-generator";
+import { pgAdvisoryXactLock } from "@/infra/db/locks";
 import { CreateGameUseCase } from "@/application/catalog/game";
 import { CreateTournamentUseCase } from "@/application/catalog/tournament";
 import { CreateMatchUseCase } from "@/application/catalog/match";
@@ -28,6 +31,7 @@ import { TransitionMarketUseCase } from "@/application/catalog/transition-market
 import { PlaceOrderUseCase } from "@/application/betting/place-order";
 import { testDbConfig } from "../../../helpers/test-db-config";
 import { resetAndMigrate } from "../../../helpers/reset-db";
+import { toBigIntRow } from "../../../helpers/pg-bigint";
 
 class TestClock {
   constructor(private current: Date) {}
@@ -111,10 +115,14 @@ describe("PlaceOrderUseCase", () => {
     markets: (tx) => new DrizzleMarketRepository(tx),
     outcomes: (tx) => new DrizzleOutcomeRepository(tx),
     economicProfiles: (tx) => new DrizzleEconomicProfileRepository(tx),
+    streamers: (tx) => new DrizzleStreamerRepository(tx),
     users: (tx) => new DrizzleUserRepository(tx),
     wallets: (tx, ownerId) => new DrizzleWalletRepository(tx, ownerId),
     betSlips: (tx, ownerId) => new DrizzleBetSlipRepository(tx, ownerId),
     betOrders: (tx, ownerId) => new DrizzleOrderRepository(tx, ownerId),
+    book: (tx) => new DrizzleBookRepository(tx),
+    allocations: (tx) => new DrizzleAllocationRepository(tx, ""),
+    acquireMarketLock: (tx, marketId) => pgAdvisoryXactLock(tx, `market:${marketId}`),
     ledger,
     ids,
     clock,
@@ -232,7 +240,12 @@ describe("PlaceOrderUseCase", () => {
 
     const wallet = await pool
       .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
+      .then((r) =>
+        toBigIntRow(r.rows[0] as { available_minor: bigint; locked_minor: bigint }, [
+          "available_minor",
+          "locked_minor",
+        ]),
+      );
     expect(wallet.available_minor).toBe(49_000n);
     expect(wallet.locked_minor).toBe(1_000n);
 
@@ -260,7 +273,7 @@ describe("PlaceOrderUseCase", () => {
 
     const wallet = await pool
       .query("SELECT available_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint });
+      .then((r) => toBigIntRow(r.rows[0] as { available_minor: bigint }, ["available_minor"]));
     expect(wallet.available_minor).toBe(50_000n);
   });
 
@@ -285,7 +298,12 @@ describe("PlaceOrderUseCase", () => {
 
     const wallet = await pool
       .query("SELECT available_minor, locked_minor FROM wallets WHERE user_id = $1", [userId])
-      .then((r) => r.rows[0] as { available_minor: bigint; locked_minor: bigint });
+      .then((r) =>
+        toBigIntRow(r.rows[0] as { available_minor: bigint; locked_minor: bigint }, [
+          "available_minor",
+          "locked_minor",
+        ]),
+      );
     expect(wallet.available_minor).toBe(500n);
     expect(wallet.locked_minor).toBe(0n);
   });
