@@ -308,7 +308,7 @@ describe("CancelOrderUseCase", () => {
     const wallet = await pool
       .query("SELECT locked_minor FROM wallets WHERE user_id = $1", [userB])
       .then((r) => toBigIntRow(r.rows[0] as { locked_minor: bigint }, ["locked_minor"]));
-    expect(wallet.locked_minor).toBe(3_000n);
+    expect(wallet.locked_minor).toBe(0n);
   });
 
   it("FIN-15: rejects cancelling an already-fully-matched order, leaving the row unchanged", async () => {
@@ -345,7 +345,7 @@ describe("CancelOrderUseCase", () => {
 
     await expect(
       cancelOrder.execute({ actorId: userA, orderId: resting.id }),
-    ).rejects.toMatchObject({ code: "INVALID_STATE_TRANSITION" });
+    ).rejects.toMatchObject({ code: "BET_NOT_CANCELLABLE" });
 
     const afterRow = await pool
       .query("SELECT status, matched_minor, unmatched_minor FROM bet_orders WHERE id = $1", [

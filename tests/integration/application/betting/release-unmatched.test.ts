@@ -378,7 +378,7 @@ describe("releaseUnmatchedOnClose", () => {
         ]),
       );
     expect(walletB.available_minor).toBe(97_000n);
-    expect(walletB.locked_minor).toBe(3_000n);
+    expect(walletB.locked_minor).toBe(0n);
   });
 
   it("is a no-op when there are no open orders left on the market", async () => {

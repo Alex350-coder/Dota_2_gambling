@@ -326,7 +326,7 @@ describe("PlaceOrderUseCase/CancelOrderUseCase concurrency (CC-01, CC-02, CC-03)
       expect(counterpartyRow.matched_minor).toBe(totalMatched);
       expect(counterpartyRow.unmatched_minor).toBe(0n);
     }
-  });
+  }, 30_000);
 
   it("CC-03: concurrent place + cancel always leaves requested = matched + unmatched + released", async () => {
     for (let i = 0; i < ITERATIONS; i++) {

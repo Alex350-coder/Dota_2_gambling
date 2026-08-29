@@ -22,6 +22,7 @@ describe("DrizzleBookRepository", () => {
     outcomeId: string,
     overrides: {
       unmatchedMinor?: number;
+      matchedMinor?: number;
       status?: string;
       createdAt?: string;
       id?: string;
@@ -35,6 +36,7 @@ describe("DrizzleBookRepository", () => {
 
     const id = overrides.id ?? randomUUID();
     const unmatchedMinor = overrides.unmatchedMinor ?? 5000;
+    const matchedMinor = overrides.matchedMinor ?? 5000 - unmatchedMinor;
     const status = overrides.status ?? "OPEN";
     const createdAt = overrides.createdAt ?? new Date().toISOString();
 
@@ -43,7 +45,7 @@ describe("DrizzleBookRepository", () => {
          (id, bet_slip_id, user_id, market_id, outcome_id, currency, requested_minor, matched_minor,
           unmatched_minor, released_minor, odds_num, odds_den, commission_bps, status,
           idempotency_key, created_at)
-       VALUES ($1, $2, $3, $4, $5, 'PEN', 5000, 0, $6, 0, 18, 10, 2000, $7, $8, $9)
+       VALUES ($1, $2, $3, $4, $5, 'PEN', 5000, $6, $7, 0, 18, 10, 2000, $8, $9, $10)
        RETURNING id`,
       [
         id,
@@ -51,6 +53,7 @@ describe("DrizzleBookRepository", () => {
         userId,
         marketId,
         outcomeId,
+        matchedMinor,
         unmatchedMinor,
         status,
         `key-${randomUUID()}`,
