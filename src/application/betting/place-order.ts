@@ -1,9 +1,8 @@
 import { DomainError } from "@/domain/errors";
-import { assertActiveAccount } from "@/domain/identity/status";
-import { assertMarketAcceptingOrders } from "@/domain/catalog/market-state";
-import { createBetOrder, type BetOrder } from "@/domain/betting/order";
-import { negate } from "@/domain/money/arith";
-import { ZERO_MINOR, toMinor } from "@/domain/money/types";
+import { assertActiveAccount } from "@/domain/identity";
+import { assertMarketAcceptingOrders } from "@/domain/catalog";
+import { createBetOrder, type BetOrder } from "@/domain/betting";
+import { negate, ZERO_MINOR, toMinor } from "@/domain/money";
 import type {
   AllocationRepository,
   AuditWriter,

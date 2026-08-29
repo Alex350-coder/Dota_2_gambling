@@ -33,8 +33,8 @@ import {
   DrizzleAllocationRepository,
   LedgerService,
   RateLimiter,
+  pgAdvisoryXactLock,
 } from "@/infra/db";
-import { pgAdvisoryXactLock } from "@/infra/db/locks";
 import { loadConfig, type Config } from "@/platform/config";
 import { SessionService } from "@/platform/session";
 import {
@@ -75,11 +75,13 @@ import {
   TransitionMarketUseCase,
   CloseMarketsUseCase,
 } from "@/application/catalog";
-import { releaseUnmatchedOnClose } from "@/application/betting/release-unmatched";
-import { PlaceOrderUseCase } from "@/application/betting/place-order";
-import { CancelOrderUseCase } from "@/application/betting/cancel-order";
-import { ListBetsUseCase } from "@/application/betting/list-bets";
-import { GetBetUseCase } from "@/application/betting/get-bet";
+import {
+  releaseUnmatchedOnClose,
+  PlaceOrderUseCase,
+  CancelOrderUseCase,
+  ListBetsUseCase,
+  GetBetUseCase,
+} from "@/application/betting";
 
 export interface Container {
   readonly config: Config;

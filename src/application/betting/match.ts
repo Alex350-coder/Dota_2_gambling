@@ -1,8 +1,11 @@
-import { planFifoAllocations, type RestingOrder } from "@/domain/matching/plan";
-import { assertTransition } from "@/domain/betting/order-state";
-import { createBetOrder, type BetOrder, type BetOrderStatus } from "@/domain/betting/order";
-import { add, negate, sub } from "@/domain/money/arith";
-import type { Minor } from "@/domain/money/types";
+import { planFifoAllocations, type RestingOrder } from "@/domain/matching";
+import {
+  assertTransition,
+  createBetOrder,
+  type BetOrder,
+  type BetOrderStatus,
+} from "@/domain/betting";
+import { add, negate, sub, type Minor } from "@/domain/money";
 import type {
   AllocationRepository,
   BetOrderRepository,

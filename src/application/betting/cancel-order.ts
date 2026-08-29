@@ -1,8 +1,6 @@
 import { DomainError } from "@/domain/errors";
-import { assertTransition } from "@/domain/betting/order-state";
-import { createBetOrder, type BetOrder } from "@/domain/betting/order";
-import { add, negate } from "@/domain/money/arith";
-import { ZERO_MINOR } from "@/domain/money/types";
+import { assertTransition, createBetOrder, type BetOrder } from "@/domain/betting";
+import { add, negate, ZERO_MINOR } from "@/domain/money";
 import type {
   AuditWriter,
   BetOrderRepository,
@@ -73,10 +71,19 @@ export class CancelOrderUseCase<Tx> {
         updatedAt: this.deps.clock.now(),
       });
 
-      assertTransition(order.status, updated.status, {
-        actor: "USER",
-        marketStatus: market.status,
-      });
+      try {
+        assertTransition(order.status, updated.status, {
+          actor: "USER",
+          marketStatus: market.status,
+        });
+      } catch (error) {
+        if (error instanceof DomainError && error.code === "INVALID_STATE_TRANSITION") {
+          throw new DomainError("BET_NOT_CANCELLABLE", "bet order cannot be cancelled", {
+            details: { orderId: order.id, status: order.status },
+          });
+        }
+        throw error;
+      }
 
       let refundTransactionId: string | undefined;
       if (releasedMinor > ZERO_MINOR) {

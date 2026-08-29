@@ -2,6 +2,7 @@ export { createDb, createPool } from "./client";
 export type { Database, DbConfig } from "./client";
 export { DrizzleUnitOfWork } from "./uow";
 export type { DbTx } from "./uow";
+export { pgAdvisoryXactLock } from "./locks";
 export { RateLimiter } from "./rate-limiter";
 export type { RateLimitClass, RateLimitCheckInput, RateLimitResult } from "./rate-limiter";
 export { DrizzleAuditWriter } from "./audit-writer";

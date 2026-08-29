@@ -1,7 +1,5 @@
-import { assertTransition } from "@/domain/betting/order-state";
-import { createBetOrder } from "@/domain/betting/order";
-import { add, negate } from "@/domain/money/arith";
-import { ZERO_MINOR } from "@/domain/money/types";
+import { assertTransition, createBetOrder } from "@/domain/betting";
+import { add, negate, ZERO_MINOR } from "@/domain/money";
 import type {
   BetOrderRepository,
   BookRepository,

@@ -2,7 +2,7 @@ import { DomainError } from "@/domain/errors";
 import type { DbTx } from "@/infra/db";
 import { DrizzleIdempotencyKeyRepository } from "@/infra/db";
 import type { IdempotencyKeyRepository, UnitOfWork } from "@/domain/ports";
-import { withIdempotency } from "@/application/shared/idempotency";
+import { withIdempotency } from "@/application/shared";
 
 export interface IdempotentRouteDeps {
   readonly uow: UnitOfWork<DbTx>;
