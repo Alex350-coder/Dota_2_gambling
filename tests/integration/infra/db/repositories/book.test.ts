@@ -111,7 +111,7 @@ describe("DrizzleBookRepository", () => {
     expect(resting.map((o) => o.id)).toEqual([restingId]);
   });
 
-  it("orders resting orders by (created_at ASC, id ASC) — FIFO with a deterministic tie-break", async () => {
+  it("orders resting orders by (created_at ASC, seq ASC) — FIFO with a deterministic tie-break", async () => {
     const otherUser = await pool.query(
       `INSERT INTO users (email, date_of_birth) VALUES ($1, '1990-01-01') RETURNING id`,
       [`book-owner-c-${randomUUID()}@example.test`],
@@ -119,15 +119,13 @@ describe("DrizzleBookRepository", () => {
     const otherUserId = otherUser.rows[0].id as string;
 
     const sameTimestamp = "2026-01-01T00:00:00.000Z";
-    const idLow = "00000000-0000-0000-0000-000000000001";
-    const idHigh = "00000000-0000-0000-0000-000000000002";
 
-    await insertBetOrder(otherUserId, outcomeBId, {
-      id: idHigh,
+    // Same created_at, so the DB-generated monotonic `seq` (insertion order) is the only
+    // thing that can break the tie deterministically.
+    const insertedFirst = await insertBetOrder(otherUserId, outcomeBId, {
       createdAt: sameTimestamp,
     });
-    await insertBetOrder(otherUserId, outcomeBId, {
-      id: idLow,
+    const insertedSecond = await insertBetOrder(otherUserId, outcomeBId, {
       createdAt: sameTimestamp,
     });
     const earliestId = await insertBetOrder(otherUserId, outcomeBId, {
@@ -138,7 +136,7 @@ describe("DrizzleBookRepository", () => {
       new DrizzleBookRepository(tx).findRestingOrders(marketId, outcomeAId, incomingUserId),
     );
 
-    expect(resting.map((o) => o.id)).toEqual([earliestId, idLow, idHigh]);
+    expect(resting.map((o) => o.id)).toEqual([earliestId, insertedFirst, insertedSecond]);
   });
 });
 

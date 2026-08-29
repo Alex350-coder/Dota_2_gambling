@@ -80,7 +80,7 @@ export class DrizzleOrderRepository implements BetOrderRepository {
       .select()
       .from(betOrders)
       .where(and(...conditions))
-      .orderBy(desc(betOrders.createdAt), desc(betOrders.id));
+      .orderBy(desc(betOrders.createdAt), desc(betOrders.seq));
 
     return rows.map((row) => this.toBetOrder(row));
   }

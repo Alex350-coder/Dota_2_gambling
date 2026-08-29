@@ -1,5 +1,6 @@
 import {
   bigint,
+  bigserial,
   index,
   integer,
   pgEnum,
@@ -64,6 +65,7 @@ export const betOrders = pgTable(
     idempotencyKey: text("idempotency_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    seq: bigserial("seq", { mode: "bigint" }).notNull(),
   },
   (table) => [
     unique("uq_bet_orders_idempotency").on(table.userId, table.idempotencyKey),
