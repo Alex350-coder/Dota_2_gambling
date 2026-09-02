@@ -23,7 +23,12 @@ export interface RawMatchResult {
  * layer only depends on this port (RULE-A02).
  */
 export interface MatchResultProvider {
-  /** `'MANUAL_ADMIN' | 'OPENDOTA' | 'PANDASCORE' | ...` — stored verbatim as `market_results.provider_key`. */
+  /**
+   * A stable provider identifier — `'MANUAL_ADMIN'`, or one of the game-specific feed
+   * adapters listed in `RESULT_PROVIDERS.md` §3 — stored verbatim as
+   * `market_results.provider_key`. Kept generic here per RULE-A02: the domain layer must
+   * never name a specific game or third-party feed (T-413's game-agnosticism gate).
+   */
   readonly key: string;
   readonly trustLevel: MatchResultTrustLevel;
   fetchResult(ref: MatchRef): Promise<RawMatchResult | null>;

@@ -30,3 +30,4 @@ export { DrizzleBookRepository } from "./repositories/book";
 export { DrizzleWalletRepository } from "./repositories/wallet-repository";
 export { LedgerService } from "./ledger";
 export { DrizzleMarketResultRepository } from "./repositories/market-result-repository";
+export { DrizzleSettlementRunRepository } from "./repositories/settlement-run-repository";
