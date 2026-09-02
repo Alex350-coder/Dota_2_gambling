@@ -78,6 +78,20 @@ export const createMarketSchema = z
   })
   .strict();
 
+export const proposeResultSchema = z
+  .object({
+    winningOutcomeId: z.uuid().nullable(),
+    rawPayload: z.record(z.string(), z.unknown()),
+  })
+  .strict();
+
+export const resolveDisputeSchema = z
+  .object({
+    winningOutcomeId: z.uuid().nullable(),
+    rawPayload: z.record(z.string(), z.unknown()),
+  })
+  .strict();
+
 export const transitionMarketSchema = z
   .object({
     to: z.enum([

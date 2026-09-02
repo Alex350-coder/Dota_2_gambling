@@ -31,10 +31,12 @@ import {
   DrizzleWalletRepository,
   DrizzleBetSlipRepository,
   DrizzleAllocationRepository,
+  DrizzleMarketResultRepository,
   LedgerService,
   RateLimiter,
   pgAdvisoryXactLock,
 } from "@/infra/db";
+import { ManualAdminResultProvider } from "@/infra/results";
 import { loadConfig, type Config } from "@/platform/config";
 import { SessionService } from "@/platform/session";
 import {
@@ -82,6 +84,12 @@ import {
   ListBetsUseCase,
   GetBetUseCase,
 } from "@/application/betting";
+import {
+  ProposeResultUseCase,
+  ConfirmResultUseCase,
+  DisputeResultUseCase,
+  ResolveDisputeUseCase,
+} from "@/application/results";
 
 export interface Container {
   readonly config: Config;
@@ -119,6 +127,7 @@ export interface Container {
   readonly betSlips: (tx: DbTx, ownerId: string) => DrizzleBetSlipRepository;
   readonly allocations: (tx: DbTx) => DrizzleAllocationRepository;
   readonly allocationsForOwner: (tx: DbTx, ownerId: string) => DrizzleAllocationRepository;
+  readonly marketResults: (tx: DbTx) => DrizzleMarketResultRepository;
   readonly ledger: LedgerService;
   readonly listGames: ListGamesUseCase<DbTx>;
   readonly getGame: GetGameUseCase<DbTx>;
@@ -147,6 +156,10 @@ export interface Container {
   readonly cancelOrder: CancelOrderUseCase<DbTx>;
   readonly listBets: ListBetsUseCase<DbTx>;
   readonly getBet: GetBetUseCase<DbTx>;
+  readonly proposeResult: ProposeResultUseCase<DbTx>;
+  readonly confirmResult: ConfirmResultUseCase<DbTx>;
+  readonly disputeResult: DisputeResultUseCase<DbTx>;
+  readonly resolveDispute: ResolveDisputeUseCase<DbTx>;
 }
 
 let cached: Container | undefined;
@@ -199,6 +212,8 @@ export function getContainer(): Container {
   const allocations = (tx: DbTx) => new DrizzleAllocationRepository(tx, "");
   const allocationsForOwner = (tx: DbTx, ownerId: string) =>
     new DrizzleAllocationRepository(tx, ownerId);
+  const marketResults = (tx: DbTx) => new DrizzleMarketResultRepository(tx);
+  const resultProvider = new ManualAdminResultProvider();
   const ledger = new LedgerService(ids, clock);
 
   const transitionMarket = new TransitionMarketUseCase<DbTx>({
@@ -225,6 +240,8 @@ export function getContainer(): Container {
       idleTimeoutHours: config.SESSION_IDLE_TIMEOUT_HOURS,
     },
   });
+
+  const resultsDeps = { uow, outcomes, marketResults, betOrders, ids, clock, audit };
 
   const mfaDeps = {
     uow,
@@ -292,6 +309,7 @@ export function getContainer(): Container {
     betSlips,
     allocations,
     allocationsForOwner,
+    marketResults,
     ledger,
     listGames: new ListGamesUseCase<DbTx>({ uow, games }),
     getGame: new GetGameUseCase<DbTx>({ uow, games }),
@@ -370,6 +388,17 @@ export function getContainer(): Container {
     }),
     listBets: new ListBetsUseCase<DbTx>({ uow, betOrders }),
     getBet: new GetBetUseCase<DbTx>({ uow, betOrders, allocations: allocationsForOwner }),
+    proposeResult: new ProposeResultUseCase<DbTx>({
+      ...resultsDeps,
+      markets,
+      provider: resultProvider,
+    }),
+    confirmResult: new ConfirmResultUseCase<DbTx>({ uow, marketResults, betOrders, clock, audit }),
+    disputeResult: new DisputeResultUseCase<DbTx>({ uow, marketResults, audit }),
+    resolveDispute: new ResolveDisputeUseCase<DbTx>({
+      ...resultsDeps,
+      providerKey: resultProvider.key,
+    }),
   };
 
   return cached;
