@@ -301,6 +301,36 @@ export function resultConfirmedEvent(actorId: string, resultId: string): AuditEv
   };
 }
 
+/** `resultId` is the `market_results` row disputed — halts settlement while it stays current (T-604). */
+export function resultDisputedEvent(actorId: string, resultId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "RESULT_DISPUTED",
+    entityType: "market_result",
+    entityId: resultId,
+  };
+}
+
+/**
+ * `resultId` is the freshly inserted replacement row; `supersedesId` is carried in `after` so a
+ * reviewer can trace the correction chain without a second query (T-604).
+ */
+export function resultResolvedEvent(
+  actorId: string,
+  resultId: string,
+  supersedesId: string,
+): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "RESULT_RESOLVED",
+    entityType: "market_result",
+    entityId: resultId,
+    after: { supersedesId },
+  };
+}
+
 export function betCancelledEvent(
   actorId: string | null,
   orderId: string,

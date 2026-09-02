@@ -75,6 +75,10 @@ const MARKET_RESULT_RULES: readonly Rule<MarketResultStatus, MarketResultTransit
   { from: "VOID_PROPOSED", to: "CONFIRMED", guard: canConfirmResult },
   { from: "VOID_PROPOSED", to: "DISPUTED", guard: () => true },
   { from: "CONFIRMED", to: "SUPERSEDED", guard: () => true },
+  // Resolving a dispute never edits the disputed row (RESULT_PROVIDERS.md §5): it is marked
+  // SUPERSEDED and a fresh PENDING row (pointing supersedesId back at it) starts the
+  // propose/confirm lifecycle over.
+  { from: "DISPUTED", to: "SUPERSEDED", guard: () => true },
 ];
 
 /**

@@ -95,7 +95,15 @@ describe("canTransitionMarketResult", () => {
     ).toBe(true);
   });
 
-  it("rejects any transition out of a terminal state", () => {
+  it("allows DISPUTED -> SUPERSEDED (resolving a dispute never edits the disputed row)", () => {
+    expect(
+      canTransitionMarketResult("DISPUTED", "SUPERSEDED", {
+        proposerId: "u1",
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects any transition out of SUPERSEDED, and DISPUTED never returns to PROPOSED directly", () => {
     const ctx = { proposerId: "u1", confirmerId: "u2" };
     expect(canTransitionMarketResult("DISPUTED", "PROPOSED", ctx)).toBe(false);
     expect(canTransitionMarketResult("SUPERSEDED", "CONFIRMED", ctx)).toBe(false);
