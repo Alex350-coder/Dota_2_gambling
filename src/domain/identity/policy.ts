@@ -14,7 +14,8 @@ export type Action =
   | "market:manage"
   | "bet:place"
   | "bet:manage"
-  | "result:manage";
+  | "result:manage"
+  | "settlement:manage";
 
 export interface Actor {
   readonly roles: readonly Role[];
@@ -51,6 +52,8 @@ const POLICY: Readonly<Record<Action, ActionRule>> = {
   // Result proposal/confirmation/dispute is admin-managed, ownerless — R-10's
   // interacted-actor guard is a separate, use-case-level check, not part of this table.
   "result:manage": { roles: [], anyOwner: ["ADMIN"] },
+  // Settle/void a market and read settlement runs — admin-managed, ownerless.
+  "settlement:manage": { roles: [], anyOwner: ["ADMIN"] },
   // Placing/cancelling a bet is self-service; ADMIN may read/manage for support/audit but
   // never places or cancels a bet as another user.
   "bet:place": { roles: ["USER"], anyOwner: ["ADMIN"] },

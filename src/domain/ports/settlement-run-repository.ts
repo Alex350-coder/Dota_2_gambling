@@ -52,6 +52,8 @@ export interface SettlementRunRepository {
   /** Most recent run for a market, if any — what every settle attempt reads first. */
   findByMarketId(marketId: string): Promise<SettlementRun | null>;
   findById(id: string): Promise<SettlementRun | null>;
+  /** Every run, newest first — admin listing (T-613), paginated in-memory like other catalog lists. */
+  list(): Promise<SettlementRun[]>;
   /**
    * Creates the market's first run `IN_PROGRESS`, or flips an existing `FAILED` run for the
    * same market back to `IN_PROGRESS` (`assertTransitionSettlementRun` still gates the latter
