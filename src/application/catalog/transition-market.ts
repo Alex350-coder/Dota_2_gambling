@@ -1,6 +1,7 @@
 import { DomainError } from "@/domain/errors";
 import { assertTransition } from "@/domain/catalog";
 import type { MarketActor, MarketStatus } from "@/domain/catalog";
+import type { Minor } from "@/domain/money";
 import type {
   AuditWriter,
   Clock,
@@ -18,6 +19,16 @@ export interface TransitionMarketInput {
   readonly to: MarketStatus;
   readonly manualClose?: boolean;
   readonly matchPlayed?: boolean;
+  /** `CLOSED -> SETTLING` guard input (T-606): a `CONFIRMED` `market_results` row exists. */
+  readonly hasConfirmedResult?: boolean;
+  /** `SETTLING -> SETTLED` guard input (T-609): the settlement run reached `COMPLETED`. */
+  readonly settlementRunCompleted?: boolean;
+  /** `SETTLING -> SETTLED` guard input (T-609): `MARKET_ESCROW:<marketId>` balance, INV-07. */
+  readonly marketEscrowMinor?: Minor;
+  /** `SETTLING -> CLOSED` rollback guard input (T-612): a settlement run failed. */
+  readonly settlementFailed?: boolean;
+  /** `SETTLING -> CLOSED` rollback guard input: the current result was disputed mid-run. */
+  readonly resultDisputed?: boolean;
 }
 
 export interface TransitionMarketDeps<Tx> {
@@ -66,6 +77,19 @@ export class TransitionMarketUseCase<Tx> {
         hasOrders: false,
         ...(input.manualClose !== undefined ? { manualClose: input.manualClose } : {}),
         ...(input.matchPlayed !== undefined ? { matchPlayed: input.matchPlayed } : {}),
+        ...(input.hasConfirmedResult !== undefined
+          ? { hasConfirmedResult: input.hasConfirmedResult }
+          : {}),
+        ...(input.settlementRunCompleted !== undefined
+          ? { settlementRunCompleted: input.settlementRunCompleted }
+          : {}),
+        ...(input.marketEscrowMinor !== undefined
+          ? { marketEscrowMinor: input.marketEscrowMinor }
+          : {}),
+        ...(input.settlementFailed !== undefined
+          ? { settlementFailed: input.settlementFailed }
+          : {}),
+        ...(input.resultDisputed !== undefined ? { resultDisputed: input.resultDisputed } : {}),
       });
 
       const updated = await markets.updateStatus(market.id, input.to);

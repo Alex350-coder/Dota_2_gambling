@@ -88,6 +88,13 @@ export type {
   CreateMarketResultInput,
 } from "./market-result-repository";
 export type {
+  SettlementRunRepository,
+  SettlementRun,
+  UpsertInProgressInput,
+  SettlementRunProgress,
+  SettlementRunCompletionTotals,
+} from "./settlement-run-repository";
+export type {
   IdempotencyKeyRepository,
   IdempotencyKeyRecord,
   CreateIdempotencyKeyInput,
