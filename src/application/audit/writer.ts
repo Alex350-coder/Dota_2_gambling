@@ -276,6 +276,20 @@ export function betPlacedEvent(
  * `ledgerTransactionId` is `undefined` when there was nothing left to refund (the order had no
  * unmatched stake), so cancelling it posted no ledger transaction at all.
  */
+/**
+ * Results & settlement event builders (T-602). `resultId` is the `market_results` row's own
+ * id — `marketId` is recoverable from that row, not stored redundantly on the audit entry.
+ */
+export function resultProposedEvent(actorId: string, resultId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "RESULT_PROPOSED",
+    entityType: "market_result",
+    entityId: resultId,
+  };
+}
+
 export function betCancelledEvent(
   actorId: string | null,
   orderId: string,

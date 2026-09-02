@@ -83,6 +83,11 @@ export type {
   MatchResultTrustLevel,
 } from "./match-result-provider";
 export type {
+  MarketResultRepository,
+  MarketResult,
+  CreateMarketResultInput,
+} from "./market-result-repository";
+export type {
   IdempotencyKeyRepository,
   IdempotencyKeyRecord,
   CreateIdempotencyKeyInput,
