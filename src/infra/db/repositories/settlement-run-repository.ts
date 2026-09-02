@@ -1,9 +1,10 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, lte, or } from "drizzle-orm";
 import type {
   SettlementRun,
   SettlementRunCompletionTotals,
   SettlementRunProgress,
   SettlementRunRepository,
+  SettlementRunRetryAttempt,
   UpsertInProgressInput,
 } from "@/domain/ports";
 import { settlementRuns } from "../schema/settlement";
@@ -107,6 +108,32 @@ export class DrizzleSettlementRunRepository implements SettlementRunRepository {
     return this.toSettlementRun(row);
   }
 
+  async listRetryable(now: Date): Promise<SettlementRun[]> {
+    const rows = await this.tx
+      .select()
+      .from(settlementRuns)
+      .where(
+        and(
+          eq(settlementRuns.status, "FAILED"),
+          or(isNull(settlementRuns.nextRetryAt), lte(settlementRuns.nextRetryAt, now)),
+        ),
+      )
+      .orderBy(settlementRuns.startedAt);
+    return rows.map((row) => this.toSettlementRun(row));
+  }
+
+  async recordRetryAttempt(id: string, attempt: SettlementRunRetryAttempt): Promise<SettlementRun> {
+    const [row] = await this.tx
+      .update(settlementRuns)
+      .set({ retryCount: attempt.retryCount, nextRetryAt: attempt.nextRetryAt })
+      .where(eq(settlementRuns.id, id))
+      .returning();
+    if (!row) {
+      throw new Error("update settlement_runs returned no row");
+    }
+    return this.toSettlementRun(row);
+  }
+
   private toSettlementRun(row: typeof settlementRuns.$inferSelect): SettlementRun {
     return {
       id: row.id,
@@ -120,6 +147,8 @@ export class DrizzleSettlementRunRepository implements SettlementRunRepository {
       payoutTotalMinor: row.payoutTotalMinor,
       commissionTotalMinor: row.commissionTotalMinor,
       refundTotalMinor: row.refundTotalMinor,
+      retryCount: row.retryCount,
+      nextRetryAt: row.nextRetryAt,
     };
   }
 }

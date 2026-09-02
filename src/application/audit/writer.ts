@@ -331,6 +331,27 @@ export function resultResolvedEvent(
   };
 }
 
+/**
+ * T-612's interim alert mechanism: `ops/OBSERVABILITY.md` alert wiring doesn't exist yet
+ * (P9 T-912), so a settlement run that has failed and been retried at least 3 times writes this
+ * audit event instead — a reviewer scanning `audit_events` for `SETTLEMENT_RUN_ALERT` can find
+ * every run that needs human attention until real alerting lands.
+ */
+export function settlementRunAlertEvent(
+  marketId: string,
+  runId: string,
+  retryCount: number,
+): AuditEventInput {
+  return {
+    actorType: "system",
+    actorId: null,
+    action: "SETTLEMENT_RUN_ALERT",
+    entityType: "settlement_run",
+    entityId: runId,
+    after: { marketId, retryCount },
+  };
+}
+
 export function betCancelledEvent(
   actorId: string | null,
   orderId: string,

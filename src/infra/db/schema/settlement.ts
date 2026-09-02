@@ -84,6 +84,8 @@ export const settlementRuns = pgTable(
       .notNull()
       .default(0n),
     refundTotalMinor: bigint("refund_total_minor", { mode: "bigint" }).notNull().default(0n),
+    retryCount: integer("retry_count").notNull().default(0),
+    nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
   },
   (table) => [
     index("idx_settlement_runs_market_id").on(table.marketId),

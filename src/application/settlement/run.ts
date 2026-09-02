@@ -23,7 +23,8 @@ import { releaseUnmatchedForSettlement } from "./release";
 import { settleAllocationsOnConfirmedResult } from "./settle-allocation";
 
 export interface SettleMarketInput {
-  readonly actorId: string;
+  /** `null` for scheduler-driven resumes (T-612's sweeper), same convention as `TransitionMarketUseCase`. */
+  readonly actorId: string | null;
   readonly marketId: string;
 }
 
