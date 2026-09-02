@@ -35,4 +35,11 @@ export interface LedgerWriter<Tx = unknown> {
    * transaction (RULE-F14).
    */
   post(tx: Tx, input: LedgerPostInput): Promise<LedgerTransaction>;
+  /**
+   * The current balance of one ledger account (`SUM(signed_amount_minor)`), narrowly scoped to
+   * back settlement's hard escrow-zero assertion (T-609, SETTLEMENT.md §4 phase 3) without
+   * giving the domain layer general SQL access (RULE-A01) — this stays on the writer port
+   * rather than a new one since `LedgerService` already owns `ledger_entries` reads/writes.
+   */
+  balanceOf(tx: Tx, accountKey: string, currency: string): Promise<bigint>;
 }

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { Clock, IdGenerator, LedgerPostInput, LedgerWriter } from "@/domain/ports";
 import { createLedgerTransaction, type LedgerTransaction } from "@/domain/ledger";
 import { DomainError } from "@/domain/errors";
@@ -71,6 +71,15 @@ export class LedgerService implements LedgerWriter<DbTx> {
     await this.applyWalletDeltas(tx, txn);
 
     return txn;
+  }
+
+  async balanceOf(tx: DbTx, accountKey: string, currency: string): Promise<bigint> {
+    const [row] = await tx
+      .select({ total: sql<string | null>`sum(${ledgerEntries.signedAmountMinor})` })
+      .from(ledgerEntries)
+      .where(and(eq(ledgerEntries.accountKey, accountKey), eq(ledgerEntries.currency, currency)));
+
+    return row?.total === null || row?.total === undefined ? 0n : BigInt(row.total);
   }
 
   private async findByIdempotencyKey(
