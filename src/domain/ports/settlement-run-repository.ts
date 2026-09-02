@@ -12,6 +12,8 @@ export interface SettlementRun {
   readonly payoutTotalMinor: bigint;
   readonly commissionTotalMinor: bigint;
   readonly refundTotalMinor: bigint;
+  readonly retryCount: number;
+  readonly nextRetryAt: Date | null;
 }
 
 export interface UpsertInProgressInput {
@@ -34,6 +36,11 @@ export interface SettlementRunCompletionTotals {
   readonly refundTotalMinor: bigint;
 }
 
+export interface SettlementRunRetryAttempt {
+  readonly retryCount: number;
+  readonly nextRetryAt: Date | null;
+}
+
 /**
  * `settlement_runs` (`SETTLEMENT.md` §3): the resume-capable state machine that guarantees a
  * market is never settled twice (`one_completed_run_per_market` partial unique index, RULE-F12).
@@ -54,4 +61,8 @@ export interface SettlementRunRepository {
   updateProgress(id: string, progress: SettlementRunProgress): Promise<SettlementRun>;
   markCompleted(id: string, totals: SettlementRunCompletionTotals): Promise<SettlementRun>;
   markFailed(id: string, finishedAt: Date): Promise<SettlementRun>;
+  /** `FAILED` runs due for a retry attempt (`nextRetryAt` unset or in the past) — T-612's sweeper input. */
+  listRetryable(now: Date): Promise<SettlementRun[]>;
+  /** Bumps the backoff state after a sweep attempt fails again; does not touch `status`. */
+  recordRetryAttempt(id: string, attempt: SettlementRunRetryAttempt): Promise<SettlementRun>;
 }

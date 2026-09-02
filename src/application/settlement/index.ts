@@ -12,3 +12,5 @@ export { VoidMarketUseCase } from "./void";
 export type { VoidMarketInput, VoidMarketDeps } from "./void";
 export { refundAllocationsOnVoid } from "./refund-allocation";
 export type { RefundAllocationsDeps, RefundAllocationsResult } from "./refund-allocation";
+export { sweepFailedSettlementRuns } from "./sweeper";
+export type { SettlementSweeperDeps, SettlementSweepResult } from "./sweeper";

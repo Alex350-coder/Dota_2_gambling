@@ -94,6 +94,7 @@ export type {
   UpsertInProgressInput,
   SettlementRunProgress,
   SettlementRunCompletionTotals,
+  SettlementRunRetryAttempt,
 } from "./settlement-run-repository";
 export type {
   IdempotencyKeyRepository,
