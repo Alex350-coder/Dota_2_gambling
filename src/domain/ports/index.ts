@@ -36,6 +36,7 @@ export type {
   AllocationRepository,
   MatchAllocation,
   CreateMatchAllocationInput,
+  AllocationCountsByStatus,
 } from "./allocation-repository";
 export type { BetSlipRepository, BetSlip, CreateBetSlipInput } from "./bet-slip-repository";
 export type { BookRepository } from "./book-repository";

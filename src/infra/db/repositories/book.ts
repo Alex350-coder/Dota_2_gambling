@@ -56,6 +56,17 @@ export class DrizzleBookRepository implements BookRepository {
     return rows.map((row) => this.toBetOrder(row));
   }
 
+  async findAllByMarketId(marketId: string): Promise<readonly BetOrder[]> {
+    const rows = await this.tx
+      .select()
+      .from(betOrders)
+      .where(eq(betOrders.marketId, marketId))
+      .orderBy(asc(betOrders.createdAt), asc(betOrders.seq))
+      .for("update");
+
+    return rows.map((row) => this.toBetOrder(row));
+  }
+
   private toBetOrder(row: typeof betOrders.$inferSelect): BetOrder {
     return {
       id: row.id,
