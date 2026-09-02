@@ -32,6 +32,7 @@ import { CreateMarketUseCase } from "@/application/catalog/create-market";
 import { TransitionMarketUseCase } from "@/application/catalog/transition-market";
 import { PlaceOrderUseCase } from "@/application/betting/place-order";
 import { ProposeResultUseCase } from "@/application/results/propose";
+import { ConfirmResultUseCase } from "@/application/results/confirm";
 import { testDbConfig } from "../../../helpers/test-db-config";
 import { resetAndMigrate } from "../../../helpers/reset-db";
 
@@ -45,7 +46,7 @@ class TestClock {
   }
 }
 
-describe("ProposeResultUseCase", () => {
+describe("ConfirmResultUseCase", () => {
   const pool = createPool(testDbConfig());
   const db = createDb(pool);
   const uow = new DrizzleUnitOfWork(db);
@@ -141,6 +142,13 @@ describe("ProposeResultUseCase", () => {
     clock,
     audit,
   });
+  const confirmResult = new ConfirmResultUseCase<DbTx>({
+    uow,
+    marketResults: (tx) => new DrizzleMarketResultRepository(tx),
+    betOrders: (tx, ownerId) => new DrizzleOrderRepository(tx, ownerId),
+    clock,
+    audit,
+  });
 
   beforeAll(async () => {
     await resetAndMigrate(pool);
@@ -150,11 +158,11 @@ describe("ProposeResultUseCase", () => {
     await pool.end();
   });
 
-  async function createAdmin(): Promise<string> {
+  async function createUser(): Promise<string> {
     const userId = ids.next();
     await pool.query(
       "INSERT INTO users (id, email, status, date_of_birth) VALUES ($1, $2, 'ACTIVE', '1990-01-01')",
-      [userId, `admin-${randomUUID()}@example.test`],
+      [userId, `user-${randomUUID()}@example.test`],
     );
     return userId;
   }
@@ -171,7 +179,7 @@ describe("ProposeResultUseCase", () => {
 
   async function createOpenMarket(
     actorId: string,
-  ): Promise<{ marketId: string; outcomeAId: string; outcomeBId: string }> {
+  ): Promise<{ marketId: string; outcomeAId: string }> {
     const game = await createGame.execute({ actorId, slug: `g-${randomUUID()}`, name: "G" });
     const [modeRow] = await pool
       .query("INSERT INTO game_modes (game_id, name) VALUES ($1, 'Std') RETURNING id", [game.id])
@@ -204,11 +212,7 @@ describe("ProposeResultUseCase", () => {
       minStakeMinor: 100n,
       maxStakeMinor: 10_000_000n,
     });
-    const streamerUserId = ids.next();
-    await pool.query(
-      "INSERT INTO users (id, email, status, date_of_birth) VALUES ($1, $2, 'ACTIVE', '1990-01-01')",
-      [streamerUserId, `streamer-${randomUUID()}@example.test`],
-    );
+    const streamerUserId = await createUser();
     const streamer = await createStreamer.execute({
       actorId,
       userId: streamerUserId,
@@ -233,176 +237,98 @@ describe("ProposeResultUseCase", () => {
       new DrizzleOutcomeRepository(tx).listByMarketId(market.id),
     );
     const outcomeA = outcomes.find((outcome) => outcome.code === "TEAM_A");
-    const outcomeB = outcomes.find((outcome) => outcome.code === "TEAM_B");
-    if (!outcomeA || !outcomeB) {
-      throw new Error("expected TEAM_A/TEAM_B outcomes");
+    if (!outcomeA) {
+      throw new Error("expected TEAM_A outcome");
     }
-    return { marketId: market.id, outcomeAId: outcomeA.id, outcomeBId: outcomeB.id };
+    return { marketId: market.id, outcomeAId: outcomeA.id };
   }
 
   async function createClosedMarket(
     actorId: string,
-  ): Promise<{ marketId: string; outcomeAId: string; outcomeBId: string }> {
-    const opened = await createOpenMarket(actorId);
-    await closeMarket(actorId, opened.marketId);
-    return opened;
+  ): Promise<{ marketId: string; outcomeAId: string }> {
+    const { marketId, outcomeAId } = await createOpenMarket(actorId);
+    await closeMarket(actorId, marketId);
+    return { marketId, outcomeAId };
   }
 
-  it("proposes a PROPOSED result for a CLOSED market and records the audit event", async () => {
-    const actorId = await createAdmin();
-    const { marketId, outcomeAId } = await createClosedMarket(actorId);
+  it("confirms a PROPOSED result when a different admin confirms", async () => {
+    const proposer = await createUser();
+    const confirmer = await createUser();
+    const { marketId, outcomeAId } = await createClosedMarket(proposer);
 
-    const result = await proposeResult.execute({
-      actorId,
+    const proposed = await proposeResult.execute({
+      actorId: proposer,
       marketId,
       winningOutcomeId: outcomeAId,
-      rawPayload: { source: "manual", winner: "TEAM_A" },
+      rawPayload: { winner: "TEAM_A" },
     });
 
-    expect(result.status).toBe("PROPOSED");
-    expect(result.winningOutcomeId).toBe(outcomeAId);
-    expect(result.providerKey).toBe("MANUAL_ADMIN");
-    expect(result.trustLevel).toBe("SINGLE_SOURCE");
-    expect(result.proposedBy).toBe(actorId);
-    expect(result.payloadHash).toHaveLength(64);
+    clock.set(new Date("2026-01-01T01:00:00.000Z"));
+    const confirmed = await confirmResult.execute({ actorId: confirmer, resultId: proposed.id });
+
+    expect(confirmed.status).toBe("CONFIRMED");
+    expect(confirmed.confirmedBy).toBe(confirmer);
+    expect(confirmed.confirmedAt).toEqual(new Date("2026-01-01T01:00:00.000Z"));
 
     const rows = await pool
       .query(
-        "SELECT action FROM audit_events WHERE entity_id = $1 AND action = 'RESULT_PROPOSED'",
-        [result.id],
+        "SELECT action FROM audit_events WHERE entity_id = $1 AND action = 'RESULT_CONFIRMED'",
+        [confirmed.id],
       )
       .then((r) => r.rows);
     expect(rows).toHaveLength(1);
   });
 
-  it("proposes a VOID_PROPOSED result when winningOutcomeId is null", async () => {
-    const actorId = await createAdmin();
-    const { marketId } = await createClosedMarket(actorId);
+  it("confirms a VOID_PROPOSED result the same way", async () => {
+    const proposer = await createUser();
+    const confirmer = await createUser();
+    const { marketId } = await createClosedMarket(proposer);
 
-    const result = await proposeResult.execute({
-      actorId,
+    const proposed = await proposeResult.execute({
+      actorId: proposer,
       marketId,
       winningOutcomeId: null,
-      rawPayload: { source: "manual", winner: null },
+      rawPayload: {},
     });
 
-    expect(result.status).toBe("VOID_PROPOSED");
-    expect(result.winningOutcomeId).toBeNull();
+    const confirmed = await confirmResult.execute({ actorId: confirmer, resultId: proposed.id });
+    expect(confirmed.status).toBe("CONFIRMED");
   });
 
-  it("rejects proposing a result for a market that is not CLOSED", async () => {
-    const actorId = await createAdmin();
-    const game = await createGame.execute({ actorId, slug: `g-${randomUUID()}`, name: "G" });
-    const [modeRow] = await pool
-      .query("INSERT INTO game_modes (game_id, name) VALUES ($1, 'Std') RETURNING id", [game.id])
-      .then((r) => r.rows);
-    const tournament = await createTournament.execute({
-      actorId,
-      gameId: game.id,
-      name: "T",
-      startsAt: new Date(),
-    });
-    const match = await createMatch.execute({
-      actorId,
-      tournamentId: tournament.id,
-      gameModeId: modeRow.id as string,
-      scheduledAt: new Date(),
-    });
-    const marketType = await createMarketType.execute({
-      actorId,
-      code: `MW_${randomUUID()}`,
-      name: "Match Winner",
-      outcomeCardinality: "BINARY",
-    });
-    const profile = await createEconomicProfile.execute({
-      actorId,
-      oddsNum: 18,
-      oddsDen: 10,
-      streamerCommissionBps: 2000,
-      platformFeeBps: 0,
-      currency: "PEN",
-      minStakeMinor: 100n,
-      maxStakeMinor: 10_000_000n,
-    });
-    const streamerUserId = ids.next();
-    await pool.query(
-      "INSERT INTO users (id, email, status, date_of_birth) VALUES ($1, $2, 'ACTIVE', '1990-01-01')",
-      [streamerUserId, `streamer-${randomUUID()}@example.test`],
-    );
-    const streamer = await createStreamer.execute({
-      actorId,
-      userId: streamerUserId,
-      displayName: "S",
-      defaultCommissionBps: 2000,
-    });
-    const market = await createMarket.execute({
-      actorId,
-      matchId: match.id,
-      marketTypeId: marketType.id,
-      streamerId: streamer.id,
-      economicProfileId: profile.id,
-      closesAt: new Date("2026-01-02T00:00:00.000Z"),
-      outcomes: [
-        { code: "TEAM_A", label: "Team A" },
-        { code: "TEAM_B", label: "Team B" },
-      ],
-    });
+  it("rejects a same-actor confirmation with UNAUTHORIZED_OPERATION (4-eyes rule)", async () => {
+    const proposer = await createUser();
+    const { marketId, outcomeAId } = await createClosedMarket(proposer);
 
-    await expect(
-      proposeResult.execute({
-        actorId,
-        marketId: market.id,
-        winningOutcomeId: null,
-        rawPayload: {},
-      }),
-    ).rejects.toMatchObject({ code: "MARKET_NOT_SETTLEABLE" });
-  });
-
-  it("rejects a winningOutcomeId that does not belong to the market", async () => {
-    const actorId = await createAdmin();
-    const { marketId } = await createClosedMarket(actorId);
-
-    await expect(
-      proposeResult.execute({
-        actorId,
-        marketId,
-        winningOutcomeId: randomUUID(),
-        rawPayload: {},
-      }),
-    ).rejects.toMatchObject({ code: "INVALID_OUTCOME" });
-  });
-
-  it("never overwrites an existing result row for the market", async () => {
-    const actorId = await createAdmin();
-    const { marketId, outcomeAId } = await createClosedMarket(actorId);
-
-    await proposeResult.execute({
-      actorId,
+    const proposed = await proposeResult.execute({
+      actorId: proposer,
       marketId,
       winningOutcomeId: outcomeAId,
-      rawPayload: { attempt: 1 },
+      rawPayload: { winner: "TEAM_A" },
     });
 
     await expect(
-      proposeResult.execute({
-        actorId,
-        marketId,
-        winningOutcomeId: outcomeAId,
-        rawPayload: { attempt: 2 },
-      }),
-    ).rejects.toMatchObject({ code: "STALE_STATE" });
+      confirmResult.execute({ actorId: proposer, resultId: proposed.id }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED_OPERATION" });
 
-    const rows = await pool
-      .query("SELECT count(*)::int AS count FROM market_results WHERE market_id = $1", [marketId])
-      .then((r) => r.rows);
-    expect(rows[0]?.count).toBe(1);
+    const found = await uow.run((tx: DbTx) =>
+      new DrizzleMarketResultRepository(tx).findById(proposed.id),
+    );
+    expect(found?.status).toBe("PROPOSED");
   });
 
-  it("R-10: rejects a proposal from an account that placed an order on the market", async () => {
-    const actorId = await createAdmin();
-    const { marketId, outcomeAId } = await createOpenMarket(actorId);
+  it("rejects confirmation from a non-existent result with RESOURCE_NOT_FOUND", async () => {
+    const confirmer = await createUser();
 
-    const interactedActor = await createAdmin();
+    await expect(
+      confirmResult.execute({ actorId: confirmer, resultId: randomUUID() }),
+    ).rejects.toMatchObject({ code: "RESOURCE_NOT_FOUND" });
+  });
+
+  it("R-10: rejects confirmation from an account that placed an order on the market", async () => {
+    const proposer = await createUser();
+    const { marketId, outcomeAId } = await createOpenMarket(proposer);
+
+    const interactedActor = await createUser();
     await pool.query(
       "INSERT INTO wallets (user_id, currency, available_minor, locked_minor) VALUES ($1, 'PEN', 50000, 0)",
       [interactedActor],
@@ -415,15 +341,16 @@ describe("ProposeResultUseCase", () => {
       idempotencyKey: randomUUID(),
     });
 
-    await closeMarket(actorId, marketId);
+    await closeMarket(proposer, marketId);
+    const proposed = await proposeResult.execute({
+      actorId: proposer,
+      marketId,
+      winningOutcomeId: outcomeAId,
+      rawPayload: { winner: "TEAM_A" },
+    });
 
     await expect(
-      proposeResult.execute({
-        actorId: interactedActor,
-        marketId,
-        winningOutcomeId: outcomeAId,
-        rawPayload: { winner: "TEAM_A" },
-      }),
+      confirmResult.execute({ actorId: interactedActor, resultId: proposed.id }),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED_OPERATION" });
   });
 });

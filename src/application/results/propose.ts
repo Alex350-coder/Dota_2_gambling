@@ -3,6 +3,7 @@ import { DomainError } from "@/domain/errors";
 import { assertTransitionMarketResult } from "@/domain/settlement";
 import type {
   AuditWriter,
+  BetOrderRepository,
   Clock,
   IdGenerator,
   MarketRepository,
@@ -13,6 +14,7 @@ import type {
   UnitOfWork,
 } from "@/domain/ports";
 import { resultProposedEvent } from "@/application/audit/writer";
+import { assertActorHasNotInteractedWithMarket } from "./guards";
 
 export interface ProposeResultInput {
   readonly actorId: string;
@@ -28,6 +30,7 @@ export interface ProposeResultDeps<Tx> {
   readonly markets: (tx: Tx) => MarketRepository;
   readonly outcomes: (tx: Tx) => OutcomeRepository;
   readonly marketResults: (tx: Tx) => MarketResultRepository;
+  readonly betOrders: (tx: Tx, ownerId: string) => BetOrderRepository;
   readonly provider: MatchResultProvider;
   readonly ids: IdGenerator;
   readonly clock: Clock;
@@ -62,6 +65,8 @@ export class ProposeResultUseCase<Tx> {
           { details: { marketId: market.id, status: market.status } },
         );
       }
+
+      await assertActorHasNotInteractedWithMarket(tx, this.deps, input.actorId, market.id);
 
       if (input.winningOutcomeId !== null) {
         const outcomes = await this.deps.outcomes(tx).listByMarketId(market.id);
