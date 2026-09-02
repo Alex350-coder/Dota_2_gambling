@@ -290,6 +290,17 @@ export function resultProposedEvent(actorId: string, resultId: string): AuditEve
   };
 }
 
+/** `resultId` is the `market_results` row confirmed — a second, distinct admin from the proposer (T-603). */
+export function resultConfirmedEvent(actorId: string, resultId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId,
+    action: "RESULT_CONFIRMED",
+    entityType: "market_result",
+    entityId: resultId,
+  };
+}
+
 export function betCancelledEvent(
   actorId: string | null,
   orderId: string,
