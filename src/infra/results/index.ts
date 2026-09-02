@@ -1,0 +1,1 @@
+export { ManualAdminResultProvider } from "./manual";

@@ -78,7 +78,8 @@ export type { EconomicModel } from "./economic-model";
 export type { PaymentProvider, PaymentReference } from "./payment-provider";
 export type {
   MatchResultProvider,
-  ExternalMatchResult,
+  MatchRef,
+  RawMatchResult,
   MatchResultTrustLevel,
 } from "./match-result-provider";
 export type {
