@@ -18,4 +18,11 @@ export interface BookRepository {
    * for the same reason as `findRestingOrders`: the caller mutates every row it reads.
    */
   findOpenOrdersByMarket(marketId: string): Promise<readonly BetOrder[]>;
+  /**
+   * Every order on a market, any status, across all outcomes and users — settlement's only
+   * way to resolve which side of a `match_allocations` pair won (each side references a
+   * `bet_orders.id`, not a user directly) and, later, to finalise every remaining order's
+   * terminal status (T-609). `FOR UPDATE` since settlement mutates orders in the same pass.
+   */
+  findAllByMarketId(marketId: string): Promise<readonly BetOrder[]>;
 }

@@ -3,9 +3,14 @@ import { assertTransition } from "@/domain/catalog";
 import { assertTransitionSettlementRun } from "@/domain/settlement";
 import { ZERO_MINOR } from "@/domain/money";
 import type {
+  AllocationRepository,
   AuditWriter,
+  BetOrderRepository,
+  BookRepository,
   Clock,
+  EconomicProfileRepository,
   IdGenerator,
+  LedgerWriter,
   MarketRepository,
   MarketResultRepository,
   SettlementRun,
@@ -13,6 +18,8 @@ import type {
   UnitOfWork,
 } from "@/domain/ports";
 import { marketStatusChangedEvent } from "@/application/audit/writer";
+import { releaseUnmatchedForSettlement } from "./release";
+import { settleAllocationsOnConfirmedResult } from "./settle-allocation";
 
 export interface SettleMarketInput {
   readonly actorId: string;
@@ -24,6 +31,11 @@ export interface SettleMarketDeps<Tx> {
   readonly markets: (tx: Tx) => MarketRepository;
   readonly marketResults: (tx: Tx) => MarketResultRepository;
   readonly settlementRuns: (tx: Tx) => SettlementRunRepository;
+  readonly allocations: (tx: Tx) => AllocationRepository;
+  readonly book: (tx: Tx) => BookRepository;
+  readonly betOrders: (tx: Tx, ownerId: string) => BetOrderRepository;
+  readonly economicProfiles: (tx: Tx) => EconomicProfileRepository;
+  readonly ledger: LedgerWriter<Tx>;
   readonly acquireMarketLock: (tx: Tx, marketId: string) => Promise<void>;
   readonly ids: IdGenerator;
   readonly clock: Clock;
@@ -31,13 +43,16 @@ export interface SettleMarketDeps<Tx> {
 }
 
 /**
- * Resume-capable settlement shell (`SETTLEMENT.md` §2-3, T-606). Establishes every precondition
- * and the run row's state machine only — Phase 1/2/3 (release, per-allocation payout, hard
- * escrow-zero finalisation) land in later commits and slot in between `upsertInProgress` and
- * `markCompleted` without changing this shape. A market's `market_results` `CONFIRMED` row and
- * `settlement_runs`' own `one_completed_run_per_market` partial unique index are what make a
- * double settlement structurally impossible, not application-level locking alone — the advisory
- * lock only serializes concurrent attempts so they see each other's writes.
+ * Resume-capable settlement orchestrator (`SETTLEMENT.md` §2-4, T-606/T-607/T-608). Establishes
+ * every precondition and the run row's state machine (T-606), then runs Phase 1 (release
+ * unmatched, defensive re-invocation of the already-idempotent T-511 logic) and Phase 2
+ * (per-allocation payout + commission, `settle:<allocationId>` keys). Phase 3 (hard
+ * escrow-zero assertion, finalisation to `COMPLETED`/`SETTLED`) lands in a later commit — until
+ * then a call always leaves the run `IN_PROGRESS` even once every allocation is settled. A
+ * market's `market_results` `CONFIRMED` row and `settlement_runs`' own
+ * `one_completed_run_per_market` partial unique index are what make a double settlement
+ * structurally impossible, not application-level locking alone — the advisory lock only
+ * serializes concurrent attempts so they see each other's writes.
  */
 export class SettleMarketUseCase<Tx> {
   constructor(private readonly deps: SettleMarketDeps<Tx>) {}
@@ -85,6 +100,25 @@ export class SettleMarketUseCase<Tx> {
         assertTransition("CLOSED", "SETTLING", { actor: "SYSTEM", hasConfirmedResult: true });
         await markets.updateStatus(market.id, "SETTLING");
         await this.deps.audit.record(tx, marketStatusChangedEvent(input.actorId, market.id));
+      }
+
+      await releaseUnmatchedForSettlement(tx, this.deps, market);
+
+      // A CONFIRMED result with winningOutcomeId === null is a void confirmation
+      // (SETTLEMENT.md §6) — a distinct refund path (T-610), not this phase's per-allocation
+      // payout math. Skip Phase 2 for it; the run stays IN_PROGRESS until the void path lands.
+      if (confirmedResult.winningOutcomeId !== null) {
+        await settleAllocationsOnConfirmedResult(
+          tx,
+          this.deps,
+          market,
+          confirmedResult.winningOutcomeId,
+        );
+        const counts = await this.deps.allocations(tx).countByStatus(market.id);
+        await settlementRuns.updateProgress(run.id, {
+          allocationsTotal: counts.active + counts.settled + counts.voided,
+          allocationsSettled: counts.settled,
+        });
       }
 
       return run;

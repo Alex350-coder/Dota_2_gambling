@@ -1,10 +1,12 @@
 import { alias } from "drizzle-orm/pg-core";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, or, sql } from "drizzle-orm";
 import type {
+  AllocationCountsByStatus,
   AllocationRepository,
   CreateMatchAllocationInput,
   MatchAllocation,
 } from "@/domain/ports";
+import type { MatchAllocationStatus } from "@/domain/settlement";
 import { betOrders, matchAllocations } from "../schema/betting";
 import type { DbTx } from "../uow";
 
@@ -87,5 +89,59 @@ export class DrizzleAllocationRepository implements AllocationRepository {
 
     const current = row?.max === null || row?.max === undefined ? 0n : BigInt(row.max);
     return current + 1n;
+  }
+
+  async listActiveByMarketId(marketId: string): Promise<readonly MatchAllocation[]> {
+    const rows = await this.tx
+      .select()
+      .from(matchAllocations)
+      .where(and(eq(matchAllocations.marketId, marketId), eq(matchAllocations.status, "ACTIVE")))
+      .orderBy(asc(matchAllocations.sequence));
+
+    return rows.map((row) => this.toMatchAllocation(row));
+  }
+
+  async updateStatus(id: string, status: MatchAllocationStatus): Promise<MatchAllocation | null> {
+    const [row] = await this.tx
+      .update(matchAllocations)
+      .set({ status })
+      .where(and(eq(matchAllocations.id, id), eq(matchAllocations.status, "ACTIVE")))
+      .returning();
+
+    return row ? this.toMatchAllocation(row) : null;
+  }
+
+  async countByStatus(marketId: string): Promise<AllocationCountsByStatus> {
+    const rows = await this.tx
+      .select({ status: matchAllocations.status, total: count() })
+      .from(matchAllocations)
+      .where(eq(matchAllocations.marketId, marketId))
+      .groupBy(matchAllocations.status);
+
+    const counts: { -readonly [K in keyof AllocationCountsByStatus]: number } = {
+      active: 0,
+      settled: 0,
+      voided: 0,
+    };
+    for (const row of rows) {
+      if (row.status === "ACTIVE") counts.active = row.total;
+      else if (row.status === "SETTLED") counts.settled = row.total;
+      else counts.voided = row.total;
+    }
+    return counts;
+  }
+
+  private toMatchAllocation(row: typeof matchAllocations.$inferSelect): MatchAllocation {
+    return {
+      id: row.id,
+      marketId: row.marketId,
+      orderAId: row.orderAId,
+      orderBId: row.orderBId,
+      sequence: row.sequence,
+      matchedMinor: row.matchedMinor,
+      status: row.status,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
   }
 }
