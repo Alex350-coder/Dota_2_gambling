@@ -440,4 +440,66 @@ describe("SettleMarketUseCase — payout math (FIN-05..08, T-614)", () => {
     const afterRetry = await walletOf(userA);
     expect(afterRetry.available).toBe(afterSettle.available);
   });
+
+  it("T-609: finalisation transitions market to SETTLED, run to COMPLETED, and orders to SETTLED", async () => {
+    const { marketId, outcomeAId, userA, userB } = await createMatchedMarket();
+    await closeAndConfirm(marketId, outcomeAId);
+
+    const admin = await createUser();
+    const run = await settleMarket.execute({ actorId: admin, marketId });
+
+    expect(run.status).toBe("COMPLETED");
+    expect(run.finishedAt).not.toBeNull();
+    expect(run.allocationsSettled).toBe(1);
+    expect(run.payoutTotalMinor).toBe(18_000n);
+    expect(run.commissionTotalMinor).toBe(2_000n);
+
+    const [marketRow] = await pool
+      .query("SELECT status FROM markets WHERE id = $1", [marketId])
+      .then((r) => r.rows as { status: string }[]);
+    expect(marketRow?.status).toBe("SETTLED");
+
+    const orderRows = await pool
+      .query("SELECT user_id, status FROM bet_orders WHERE market_id = $1", [marketId])
+      .then((r) => r.rows as { user_id: string; status: string }[]);
+    expect(orderRows).toHaveLength(2);
+    for (const row of orderRows) {
+      expect(row.status).toBe("SETTLED");
+      expect([userA, userB]).toContain(row.user_id);
+    }
+  });
+
+  it("T-609: the hard escrow-zero assert aborts finalisation (and the whole transaction) if escrow is nonzero", async () => {
+    const { marketId, outcomeAId } = await createMatchedMarket();
+    await closeAndConfirm(marketId, outcomeAId);
+
+    // Corrupt escrow by hand: post a balanced transaction (so the DB's own trg_ledger_balanced
+    // constraint trigger, RULE-F05, doesn't reject it) that nonetheless leaves a stray +1 minor
+    // residual on MARKET_ESCROW, offset against PLATFORM_REVENUE. This simulates an upstream
+    // leak this assert exists to catch — it can only be manufactured with raw SQL since every
+    // real code path keeps each individual account's balance correct, not just the transaction.
+    const strayId = ids.next();
+    await pool.query(
+      `INSERT INTO ledger_transactions (id, kind, reference_type, reference_id, idempotency_key, actor_type, created_at)
+       VALUES ($1, 'ADJUSTMENT', 'market', $2, $3, 'SYSTEM', now())`,
+      [strayId, marketId, `stray:${strayId}`],
+    );
+    await pool.query(
+      `INSERT INTO ledger_entries (id, transaction_id, account_key, currency, signed_amount_minor, created_at)
+       VALUES ($1, $2, $3, 'PEN', 1, now()), ($4, $2, 'PLATFORM_REVENUE', 'PEN', -1, now())`,
+      [ids.next(), strayId, `MARKET_ESCROW:${marketId}`, ids.next()],
+    );
+
+    const admin = await createUser();
+    await expect(settleMarket.execute({ actorId: admin, marketId })).rejects.toMatchObject({
+      code: "INTERNAL_ERROR",
+    });
+
+    // No partial commit: the market must not have advanced to SETTLED despite Phase 2 having
+    // run inside the same aborted transaction.
+    const [marketRow] = await pool
+      .query("SELECT status FROM markets WHERE id = $1", [marketId])
+      .then((r) => r.rows as { status: string }[]);
+    expect(marketRow?.status).not.toBe("SETTLED");
+  });
 });

@@ -18,6 +18,7 @@ import type {
   UnitOfWork,
 } from "@/domain/ports";
 import { marketStatusChangedEvent } from "@/application/audit/writer";
+import { finalizeSettlement } from "./finalize";
 import { releaseUnmatchedForSettlement } from "./release";
 import { settleAllocationsOnConfirmedResult } from "./settle-allocation";
 
@@ -68,6 +69,15 @@ export class SettleMarketUseCase<Tx> {
           details: { marketId: input.marketId },
         });
       }
+      // Checked ahead of the general CLOSED/SETTLING guard below: a SETTLED market is a more
+      // specific, more useful failure (`ALREADY_SETTLED`) than the generic
+      // `MARKET_NOT_SETTLEABLE` that status would otherwise fall into, and matches
+      // `SETTLEMENT.md` §2's documented precondition-failure codes.
+      if (market.status === "SETTLED") {
+        throw new DomainError("ALREADY_SETTLED", "this market has already been settled", {
+          details: { marketId: market.id },
+        });
+      }
       if (market.status !== "CLOSED" && market.status !== "SETTLING") {
         throw new DomainError(
           "MARKET_NOT_SETTLEABLE",
@@ -108,16 +118,25 @@ export class SettleMarketUseCase<Tx> {
       // (SETTLEMENT.md §6) — a distinct refund path (T-610), not this phase's per-allocation
       // payout math. Skip Phase 2 for it; the run stays IN_PROGRESS until the void path lands.
       if (confirmedResult.winningOutcomeId !== null) {
-        await settleAllocationsOnConfirmedResult(
+        const phase2 = await settleAllocationsOnConfirmedResult(
           tx,
           this.deps,
           market,
           confirmedResult.winningOutcomeId,
         );
         const counts = await this.deps.allocations(tx).countByStatus(market.id);
-        await settlementRuns.updateProgress(run.id, {
+        const updatedRun = await settlementRuns.updateProgress(run.id, {
           allocationsTotal: counts.active + counts.settled + counts.voided,
           allocationsSettled: counts.settled,
+        });
+
+        // No cross-transaction batching yet (T-611 carve-out — see finalize.ts): every
+        // allocation settles in this same call, so `counts.active === 0` always holds here.
+        // Phase 3 finalises immediately rather than leaving the run IN_PROGRESS.
+        return await finalizeSettlement(tx, this.deps, market, updatedRun, {
+          payoutTotalMinor: phase2.payoutTotalMinor,
+          commissionTotalMinor: phase2.commissionTotalMinor,
+          refundTotalMinor: 0n,
         });
       }
 

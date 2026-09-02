@@ -257,17 +257,20 @@ describe("SettleMarketUseCase", () => {
     return { marketId, outcomeAId };
   }
 
-  it("starts a run and transitions the market CLOSED -> SETTLING on the first attempt", async () => {
+  it("starts a run, passes through CLOSED -> SETTLING, and finalises to COMPLETED/SETTLED on the first attempt", async () => {
     const admin = await createUser();
     const { marketId } = await createClosedMarketWithConfirmedResult();
 
+    // No orders exist on this fixture market, so Phase 2 has nothing to settle and Phase 3
+    // finalises immediately in the same call (T-609) — CLOSED -> SETTLING is an intermediate
+    // step within this same transaction, not an observable end state here.
     const run = await settleMarket.execute({ actorId: admin, marketId });
 
-    expect(run.status).toBe("IN_PROGRESS");
+    expect(run.status).toBe("COMPLETED");
     expect(run.marketId).toBe(marketId);
 
     const market = await uow.run((tx: DbTx) => new DrizzleMarketRepository(tx).findById(marketId));
-    expect(market?.status).toBe("SETTLING");
+    expect(market?.status).toBe("SETTLED");
   });
 
   it("rejects settling a market that is not CLOSED or SETTLING with MARKET_NOT_SETTLEABLE", async () => {
@@ -309,19 +312,7 @@ describe("SettleMarketUseCase", () => {
     const admin = await createUser();
     const { marketId } = await createClosedMarketWithConfirmedResult();
     const run = await settleMarket.execute({ actorId: admin, marketId });
-
-    // No finalisation use case exists yet (T-609) — mark the run COMPLETED directly to prove the
-    // structural guarantee this precondition exists to protect (SETTLEMENT.md §3's
-    // one_completed_run_per_market partial unique index).
-    await uow.run((tx: DbTx) =>
-      new DrizzleSettlementRunRepository(tx).markCompleted(run.id, {
-        finishedAt: clock.now(),
-        allocationsSettled: 0,
-        payoutTotalMinor: 0n,
-        commissionTotalMinor: 0n,
-        refundTotalMinor: 0n,
-      }),
-    );
+    expect(run.status).toBe("COMPLETED");
 
     await expect(settleMarket.execute({ actorId: admin, marketId })).rejects.toMatchObject({
       code: "ALREADY_SETTLED",
@@ -332,16 +323,7 @@ describe("SettleMarketUseCase", () => {
     const admin = await createUser();
     const { marketId } = await createClosedMarketWithConfirmedResult();
     const run = await settleMarket.execute({ actorId: admin, marketId });
-
-    await uow.run((tx: DbTx) =>
-      new DrizzleSettlementRunRepository(tx).markCompleted(run.id, {
-        finishedAt: clock.now(),
-        allocationsSettled: 0,
-        payoutTotalMinor: 0n,
-        commissionTotalMinor: 0n,
-        refundTotalMinor: 0n,
-      }),
-    );
+    expect(run.status).toBe("COMPLETED");
 
     const secondRunId = ids.next();
     await expect(
@@ -356,25 +338,56 @@ describe("SettleMarketUseCase", () => {
   it("resumes a FAILED run instead of starting a new one", async () => {
     const admin = await createUser();
     const { marketId } = await createClosedMarketWithConfirmedResult();
-    const run = await settleMarket.execute({ actorId: admin, marketId });
 
+    // Synthesize a mid-run crash: leave the market SETTLING with a FAILED run behind, without
+    // ever going through Phase 3. A real `execute()` call now always finalises to COMPLETED in
+    // one transaction (no crash point exists to hit this naturally until T-611's cross-batch
+    // resumption lands), so this is the only way to exercise the FAILED -> IN_PROGRESS resume
+    // guard today.
+    const confirmedResult = await uow.run((tx: DbTx) =>
+      new DrizzleMarketResultRepository(tx).findConfirmedByMarketId(marketId),
+    );
+    if (!confirmedResult) throw new Error("expected a confirmed result");
+    await uow.run((tx: DbTx) => new DrizzleMarketRepository(tx).updateStatus(marketId, "SETTLING"));
+    const crashedRun = await uow.run((tx: DbTx) =>
+      new DrizzleSettlementRunRepository(tx).upsertInProgress({
+        id: ids.next(),
+        marketId,
+        resultId: confirmedResult.id,
+        startedAt: clock.now(),
+      }),
+    );
     await uow.run((tx: DbTx) =>
-      new DrizzleSettlementRunRepository(tx).markFailed(run.id, clock.now()),
+      new DrizzleSettlementRunRepository(tx).markFailed(crashedRun.id, clock.now()),
     );
 
     const resumed = await settleMarket.execute({ actorId: admin, marketId });
 
-    expect(resumed.id).toBe(run.id);
-    expect(resumed.status).toBe("IN_PROGRESS");
+    expect(resumed.id).toBe(crashedRun.id);
+    expect(resumed.status).toBe("COMPLETED");
   });
 
   it("rejects settling a market whose run is already IN_PROGRESS with ALREADY_SETTLED", async () => {
     const admin = await createUser();
     const { marketId } = await createClosedMarketWithConfirmedResult();
-    await settleMarket.execute({ actorId: admin, marketId });
 
-    // Market is now SETTLING with an IN_PROGRESS run; a second attempt must not start a
-    // concurrent run for the same market.
+    // Synthesize a concurrent-attempt snapshot: market SETTLING with a run already
+    // IN_PROGRESS, without ever calling `execute()` (which would run straight through to
+    // COMPLETED on this order-less fixture market).
+    const confirmedResult = await uow.run((tx: DbTx) =>
+      new DrizzleMarketResultRepository(tx).findConfirmedByMarketId(marketId),
+    );
+    if (!confirmedResult) throw new Error("expected a confirmed result");
+    await uow.run((tx: DbTx) => new DrizzleMarketRepository(tx).updateStatus(marketId, "SETTLING"));
+    await uow.run((tx: DbTx) =>
+      new DrizzleSettlementRunRepository(tx).upsertInProgress({
+        id: ids.next(),
+        marketId,
+        resultId: confirmedResult.id,
+        startedAt: clock.now(),
+      }),
+    );
+
     await expect(settleMarket.execute({ actorId: admin, marketId })).rejects.toMatchObject({
       code: "ALREADY_SETTLED",
     });
