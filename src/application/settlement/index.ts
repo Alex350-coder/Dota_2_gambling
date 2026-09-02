@@ -14,3 +14,5 @@ export { refundAllocationsOnVoid } from "./refund-allocation";
 export type { RefundAllocationsDeps, RefundAllocationsResult } from "./refund-allocation";
 export { sweepFailedSettlementRuns } from "./sweeper";
 export type { SettlementSweeperDeps, SettlementSweepResult } from "./sweeper";
+export { ListSettlementRunsUseCase, GetSettlementRunUseCase } from "./list";
+export type { ListSettlementRunsDeps, GetSettlementRunInput, GetSettlementRunDeps } from "./list";

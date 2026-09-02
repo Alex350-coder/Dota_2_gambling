@@ -28,6 +28,14 @@ export class DrizzleSettlementRunRepository implements SettlementRunRepository {
     return row ? this.toSettlementRun(row) : null;
   }
 
+  async list(): Promise<SettlementRun[]> {
+    const rows = await this.tx
+      .select()
+      .from(settlementRuns)
+      .orderBy(desc(settlementRuns.startedAt));
+    return rows.map((row) => this.toSettlementRun(row));
+  }
+
   async upsertInProgress(input: UpsertInProgressInput): Promise<SettlementRun> {
     const existing = await this.findByMarketId(input.marketId);
     if (existing) {

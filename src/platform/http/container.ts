@@ -32,6 +32,7 @@ import {
   DrizzleBetSlipRepository,
   DrizzleAllocationRepository,
   DrizzleMarketResultRepository,
+  DrizzleSettlementRunRepository,
   LedgerService,
   RateLimiter,
   pgAdvisoryXactLock,
@@ -90,8 +91,9 @@ import {
   DisputeResultUseCase,
   ResolveDisputeUseCase,
 } from "@/application/results";
+import { buildSettlementUseCases, type SettlementUseCases } from "./container-settlement";
 
-export interface Container {
+export interface Container extends SettlementUseCases<DbTx> {
   readonly config: Config;
   readonly clock: Clock;
   readonly uow: DrizzleUnitOfWork;
@@ -128,6 +130,7 @@ export interface Container {
   readonly allocations: (tx: DbTx) => DrizzleAllocationRepository;
   readonly allocationsForOwner: (tx: DbTx, ownerId: string) => DrizzleAllocationRepository;
   readonly marketResults: (tx: DbTx) => DrizzleMarketResultRepository;
+  readonly settlementRuns: (tx: DbTx) => DrizzleSettlementRunRepository;
   readonly ledger: LedgerService;
   readonly listGames: ListGamesUseCase<DbTx>;
   readonly getGame: GetGameUseCase<DbTx>;
@@ -213,6 +216,7 @@ export function getContainer(): Container {
   const allocationsForOwner = (tx: DbTx, ownerId: string) =>
     new DrizzleAllocationRepository(tx, ownerId);
   const marketResults = (tx: DbTx) => new DrizzleMarketResultRepository(tx);
+  const settlementRuns = (tx: DbTx) => new DrizzleSettlementRunRepository(tx);
   const resultProvider = new ManualAdminResultProvider();
   const ledger = new LedgerService(ids, clock);
 
@@ -242,6 +246,15 @@ export function getContainer(): Container {
   });
 
   const resultsDeps = { uow, outcomes, marketResults, betOrders, ids, clock, audit };
+  const settlementUseCases = buildSettlementUseCases({
+    ...resultsDeps,
+    markets,
+    settlementRuns,
+    allocations,
+    book,
+    economicProfiles,
+    ledger,
+  });
 
   const mfaDeps = {
     uow,
@@ -310,6 +323,7 @@ export function getContainer(): Container {
     allocations,
     allocationsForOwner,
     marketResults,
+    settlementRuns,
     ledger,
     listGames: new ListGamesUseCase<DbTx>({ uow, games }),
     getGame: new GetGameUseCase<DbTx>({ uow, games }),
@@ -334,17 +348,8 @@ export function getContainer(): Container {
       audit,
     }),
     createStreamer: new CreateStreamerUseCase<DbTx>({ uow, users, streamers, ids, audit }),
-    updateStreamerCommission: new UpdateStreamerCommissionUseCase<DbTx>({
-      uow,
-      streamers,
-      audit,
-    }),
-    createStreamerChannel: new CreateStreamerChannelUseCase<DbTx>({
-      uow,
-      streamers,
-      ids,
-      audit,
-    }),
+    updateStreamerCommission: new UpdateStreamerCommissionUseCase<DbTx>({ uow, streamers, audit }),
+    createStreamerChannel: new CreateStreamerChannelUseCase<DbTx>({ uow, streamers, ids, audit }),
     createMarket: new CreateMarketUseCase<DbTx>({
       uow,
       matches,
@@ -399,6 +404,7 @@ export function getContainer(): Container {
       ...resultsDeps,
       providerKey: resultProvider.key,
     }),
+    ...settlementUseCases,
   };
 
   return cached;
