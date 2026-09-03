@@ -47,6 +47,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm depcruise
       - run: pnpm knip
+      # MET-T-03: every one of the 32 named mandatory scenario ids (FIN-01..21, PROP-01..04,
+      # CC-01..07) must be referenced by at least one test file. Filesystem-only, no DB needed.
+      - run: pnpm test:manifest
 
   unit:
     name: unit

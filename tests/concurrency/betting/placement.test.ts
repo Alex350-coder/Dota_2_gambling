@@ -278,7 +278,7 @@ describe("PlaceOrderUseCase/CancelOrderUseCase concurrency (CC-01, CC-02, CC-03)
     }
   });
 
-  it("CC-02: 10 concurrent orders against one resting counterparty never overmatch", async () => {
+  it("CC-02 / FIN-10: 10 concurrent orders against one resting counterparty never overmatch", async () => {
     for (let i = 0; i < ITERATIONS; i++) {
       const { marketId, outcomeAId, outcomeBId } = await createOpenMarket();
       const counterpartyId = await createUser(10_000n);
