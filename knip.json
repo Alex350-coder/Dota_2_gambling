@@ -1,6 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/domain/**/!(*.test).ts", "src/infra/**/!(*.test).ts", "scripts/**/!(*.test).ts"],
+  "entry": [
+    "src/domain/**/!(*.test).ts",
+    "src/infra/**/!(*.test).ts",
+    "src/application/**/!(*.test).ts",
+    "scripts/**/!(*.test).ts"
+  ],
   "ignore": ["tooling/__fixtures__/**"],
   "ignoreDependencies": ["eslint-config-next", "lint-staged"]
 }
