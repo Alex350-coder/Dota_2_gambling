@@ -47,7 +47,7 @@
     "next": "15.5.23",
     "otplib": "^13.4.1",
     "pg": "^8.23.0",
-    "react": "19.1.0",
+    "react": "19.2.8",
     "react-dom": "19.1.0"
   },
   "devDependencies": {
