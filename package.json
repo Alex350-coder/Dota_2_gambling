@@ -36,7 +36,8 @@
     "reconcile": "tsx scripts/reconcile.ts",
     "coverage:merge": "tsx scripts/coverage-merge.ts",
     "coverage:check": "tsx scripts/coverage-check.ts",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm test && pnpm build",
+    "test:manifest": "tsx scripts/test-manifest.ts",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm test && pnpm test:manifest && pnpm build",
     "verify:full": "pnpm verify && pnpm test:e2e",
     "prepare": "husky"
   },
