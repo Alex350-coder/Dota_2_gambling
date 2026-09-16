@@ -4,6 +4,7 @@ import { z } from "zod";
 import { DomainError } from "@/domain/errors";
 import { getContainer } from "@/platform/http/container";
 import { MarketStatusBadge } from "@/ui/catalog/MarketStatusBadge";
+import { EmptyState } from "@/ui/layout/EmptyState";
 
 /** Catalog is small enough that one page covers it all — see the games listing page for the same cap. */
 const MARKETS_PAGE_LIMIT = 50;
@@ -47,7 +48,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
       <section>
         <h2 className="mb-3 text-xl font-semibold">Markets</h2>
         {marketsForMatch.length === 0 ? (
-          <p className="text-[var(--text-muted)]">No markets for this match yet.</p>
+          <EmptyState message="No markets for this match yet." />
         ) : (
           <ul className="flex flex-col gap-2">
             {marketsForMatch.map((market) => (

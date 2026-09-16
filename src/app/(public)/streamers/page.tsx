@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getContainer } from "@/platform/http/container";
+import { EmptyState } from "@/ui/layout/EmptyState";
 
 export const metadata = {
   title: "Streamers — P2P Arena",
@@ -21,7 +22,7 @@ export default async function StreamersPage() {
       </p>
 
       {streamers.items.length === 0 ? (
-        <p className="text-[var(--text-muted)]">No streamers yet.</p>
+        <EmptyState message="No streamers yet." />
       ) : (
         <ul className="flex flex-col gap-2">
           {streamers.items.map((streamer) => (
