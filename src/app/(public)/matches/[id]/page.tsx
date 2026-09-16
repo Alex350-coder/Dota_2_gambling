@@ -1,18 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import { DomainError } from "@/domain/errors";
 import { getContainer } from "@/platform/http/container";
 import { MarketStatusBadge } from "@/ui/catalog/MarketStatusBadge";
 
 /** Catalog is small enough that one page covers it all — see the games listing page for the same cap. */
 const MARKETS_PAGE_LIMIT = 50;
+const idSchema = z.uuid();
 
 interface PageProps {
   readonly params: Promise<{ id: string }>;
 }
 
 export default async function MatchDetailPage({ params }: PageProps) {
-  const { id } = await params;
+  const { id: rawId } = await params;
+  const parsedId = idSchema.safeParse(rawId);
+  if (!parsedId.success) {
+    notFound();
+  }
+  const id = parsedId.data;
+
   const container = getContainer();
 
   let match;
