@@ -1,4 +1,5 @@
 import path from "node:path";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 /**
@@ -15,6 +16,9 @@ import { defineConfig } from "vitest/config";
 const enforceThresholds = process.env.COVERAGE_SPLIT !== "true";
 
 export default defineConfig({
+  // Needed for src/ui/**'s .tsx component tests (T-703); individual test files opt into
+  // `// @vitest-environment jsdom` — everything else keeps the default "node" environment below.
+  plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
@@ -22,6 +26,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    setupFiles: ["./tests/setup/testing-library.ts"],
     // Migration test files (tests/db/**) share one Postgres DB and each resets the
     // schema in beforeAll; running files in parallel races on DROP SCHEMA/CREATE SCHEMA.
     fileParallelism: false,
