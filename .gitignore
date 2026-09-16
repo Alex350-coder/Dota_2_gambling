@@ -48,6 +48,7 @@ next-env.d.ts
 # --- Test, coverage and tooling artefacts --------------------------------
 /coverage
 coverage-parts/
+.e2e-certs/
 .nyc_output/
 playwright-report/
 test-results/

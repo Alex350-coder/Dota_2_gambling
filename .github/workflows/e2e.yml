@@ -32,7 +32,10 @@ jobs:
     env:
       MONEY_MODE: SIMULATED
       DATABASE_URL: postgresql://postgres:ci_local_only@localhost:5432/betting_ci
-      APP_URL: http://localhost:3000
+      # https, not http: WebKit refuses to send the Secure session cookie over plain HTTP even
+      # to localhost, so playwright.config.ts serves this job's build over self-signed HTTPS
+      # (scripts/e2e-generate-cert.ts + scripts/e2e-https-server.ts).
+      APP_URL: https://localhost:3000
       # Ephemeral, CI-only value (T-316) — the running server needs it to boot, it
       # protects nothing production-facing here.
       ENCRYPTION_KEY: ci-only-encryption-key-not-a-secret-000
