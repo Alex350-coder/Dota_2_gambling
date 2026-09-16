@@ -8,8 +8,13 @@ import { DomainError } from "@/domain/errors";
 // loadConfig() and node:crypto-based helpers below are not edge-safe.
 export const runtime = "nodejs";
 
+/**
+ * T-702 (Plan.md P7 security requirement: "strict CSP with nonces") extends this matcher from
+ * API-only to every route, public pages included, excluding static/build assets that can't
+ * carry a per-request nonce anyway.
+ */
 export const config = {
-  matcher: "/api/:path*",
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -39,19 +44,29 @@ export function middleware(request: NextRequest): NextResponse {
         const response = toErrorResponse(
           new DomainError("UNAUTHORIZED_OPERATION", "invalid or missing CSRF token"),
         );
-        applySecurityHeaders(response);
+        applySecurityHeaders(response, generateNonce());
         return response;
       }
     }
   }
 
-  const response = NextResponse.next();
-  applySecurityHeaders(response);
+  const nonce = generateNonce();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  applySecurityHeaders(response, nonce);
   return response;
 }
 
-function applySecurityHeaders(response: NextResponse): void {
-  const headers = buildSecurityHeaders({ nonce: generateNonce() });
+/**
+ * `nonce` is forwarded on the *request* headers above (not just the response) so Next.js can
+ * apply the same nonce to the inline scripts it injects for RSC/hydration during this render —
+ * generating a second, mismatched nonce here would make Next's own scripts violate the CSP
+ * header we're about to set.
+ */
+function applySecurityHeaders(response: NextResponse, nonce: string): void {
+  const headers = buildSecurityHeaders({ nonce });
   for (const [key, value] of Object.entries(headers)) {
     response.headers.set(key, value);
   }
