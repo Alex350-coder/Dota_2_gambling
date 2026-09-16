@@ -20,9 +20,17 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
 
   return (
     <div data-theme="default" className="flex min-h-screen flex-col">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-[var(--surface-2)] focus:px-4 focus:py-2 focus:text-[var(--text-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+      >
+        Skip to main content
+      </a>
       {config.MONEY_MODE === "SIMULATED" && <DisclaimerBanner />}
       <NavBar />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
+      <main id="main-content" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+        {children}
+      </main>
       <Footer />
     </div>
   );

@@ -112,7 +112,10 @@ export function BetForm({ marketId, outcomeId, currency, onPlaced }: BetFormProp
           setAmountMinor(event.target.value);
         }}
         className="rounded border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-2 text-[var(--text-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
-        aria-describedby="bet-amount-estimate"
+        aria-invalid={state.kind === "error"}
+        aria-describedby={
+          state.kind === "error" ? "bet-amount-estimate bet-amount-error" : "bet-amount-estimate"
+        }
       />
       <p id="bet-amount-estimate" className="text-sm text-[var(--text-muted)]">
         {estimatedReturn
@@ -121,7 +124,7 @@ export function BetForm({ marketId, outcomeId, currency, onPlaced }: BetFormProp
       </p>
 
       {state.kind === "error" && (
-        <p role="alert" className="text-sm text-[var(--state-danger)]">
+        <p id="bet-amount-error" role="alert" className="text-sm text-[var(--state-danger)]">
           {state.message}
         </p>
       )}
@@ -129,7 +132,7 @@ export function BetForm({ marketId, outcomeId, currency, onPlaced }: BetFormProp
       <button
         type="submit"
         disabled={!isValidAmount || state.kind === "submitting"}
-        className="rounded bg-[var(--accent-primary)] px-4 py-2 font-medium text-[var(--accent-contrast)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+        className="rounded bg-[var(--accent-primary)] px-4 py-2 font-medium text-[var(--accent-primary-contrast)] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
       >
         {state.kind === "submitting" ? "Placing bet…" : "Place bet"}
       </button>

@@ -112,7 +112,7 @@ function HomeSection({ title, viewAllHref, emptyLabel, children }: HomeSectionPr
           href={viewAllHref}
           className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
         >
-          View all
+          View all<span className="sr-only"> {title.toLowerCase()}</span>
         </Link>
       </div>
       {hasChildren ? (
