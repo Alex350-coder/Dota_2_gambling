@@ -1,24 +1,36 @@
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import { DomainError } from "@/domain/errors";
 import { getContainer } from "@/platform/http/container";
 import { MarketStatusBadge } from "@/ui/catalog/MarketStatusBadge";
+import { MarketBettingPanel } from "@/ui/betting/MarketBettingPanel";
 import { Money } from "@/ui/money/Money";
+
+const idSchema = z.uuid();
 
 interface PageProps {
   readonly params: Promise<{ id: string }>;
 }
 
 export default async function MarketDetailPage({ params }: PageProps) {
-  const { id } = await params;
+  const { id: rawId } = await params;
+  const parsedId = idSchema.safeParse(rawId);
+  if (!parsedId.success) {
+    notFound();
+  }
+  const id = parsedId.data;
+
   const container = getContainer();
 
   let market;
   let book;
+  let streamer;
   try {
     [market, book] = await Promise.all([
       container.getMarket.execute({ id }),
       container.getMarketBook.execute({ marketId: id }),
     ]);
+    streamer = await container.getStreamer.execute({ id: market.streamerId });
   } catch (error) {
     if (error instanceof DomainError && error.code === "RESOURCE_NOT_FOUND") {
       notFound();
@@ -26,7 +38,6 @@ export default async function MarketDetailPage({ params }: PageProps) {
     throw error;
   }
 
-  const streamer = await container.getStreamer.execute({ id: market.streamerId });
   const currency = container.config.CURRENCY;
 
   return (
@@ -67,6 +78,20 @@ export default async function MarketDetailPage({ params }: PageProps) {
           ))}
         </ul>
       </section>
+
+      {market.status === "OPEN" && (
+        <section>
+          <h2 className="mb-3 text-xl font-semibold">Place a bet</h2>
+          <MarketBettingPanel
+            marketId={market.id}
+            currency={currency}
+            outcomes={book.outcomes.map((outcome) => ({
+              outcomeId: outcome.outcomeId,
+              label: outcome.label,
+            }))}
+          />
+        </section>
+      )}
     </div>
   );
 }
