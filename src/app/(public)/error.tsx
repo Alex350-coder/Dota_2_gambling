@@ -21,7 +21,7 @@ export default function PublicError({ error, reset }: PublicErrorProps) {
       <button
         type="button"
         onClick={reset}
-        className="rounded bg-[var(--accent-primary)] px-4 py-2 font-medium text-[var(--accent-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+        className="rounded bg-[var(--accent-primary)] px-4 py-2 font-medium text-[var(--accent-primary-contrast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
       >
         Try again
       </button>
