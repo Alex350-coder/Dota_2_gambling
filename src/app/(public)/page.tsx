@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getContainer } from "@/platform/http/container";
 import { MarketStatusBadge } from "@/ui/catalog/MarketStatusBadge";
+import { EmptyState } from "@/ui/layout/EmptyState";
 
 const HOME_PAGE_LIMIT = 5;
 
@@ -117,7 +118,7 @@ function HomeSection({ title, viewAllHref, emptyLabel, children }: HomeSectionPr
       {hasChildren ? (
         <ul className="flex flex-col gap-2">{children}</ul>
       ) : (
-        <p className="text-[var(--text-muted)]">{emptyLabel}</p>
+        <EmptyState message={emptyLabel} />
       )}
     </section>
   );

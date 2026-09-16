@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getContainer } from "@/platform/http/container";
+import { EmptyState } from "@/ui/layout/EmptyState";
 
 export const metadata = {
   title: "Matches — P2P Arena",
@@ -31,7 +32,7 @@ export default async function MatchesPage({ searchParams }: PageProps) {
       <h1 className="text-3xl font-bold">Matches</h1>
 
       {matches.items.length === 0 ? (
-        <p className="text-[var(--text-muted)]">No matches yet.</p>
+        <EmptyState message="No matches yet." />
       ) : (
         <ul className="flex flex-col gap-2">
           {matches.items.map((match) => (
