@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../ui/tokens/theme.css";
 
 :root {
   --background: #ffffff;
@@ -17,6 +18,16 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+}
+
+/*
+ * MVP is dark-only for themed (public) pages (UI.md): once a `data-theme` is applied,
+ * the theme tokens above are the single source of truth for background/foreground, and the
+ * OS `prefers-color-scheme` media query above no longer applies.
+ */
+[data-theme] {
+  background: var(--surface-0);
+  color: var(--text-primary);
 }
 
 body {

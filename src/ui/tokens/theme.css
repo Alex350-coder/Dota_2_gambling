@@ -1,0 +1,119 @@
+/**
+ * Theme tokens (T-701, UI.md). Themes are data, never layout: switching `data-theme`
+ * changes only color/accent/pattern tokens below, never spacing, type scale, or DOM
+ * structure. MVP is dark-only (no light-mode variant per theme).
+ *
+ * Token groups: --surface-*, --border-*, --text-*, --accent-*, --state-*, --money-*,
+ * --focus-ring. Every theme defines the same token names so components never branch on
+ * `data-theme` directly — they only ever reference the token.
+ */
+
+[data-theme="default"] {
+  --surface-0: #0b0c10;
+  --surface-1: #14161c;
+  --surface-2: #1d2028;
+  --border-default: #2a2e38;
+  --border-strong: #3c4152;
+  --text-primary: #f5f6f8;
+  --text-secondary: #a7adba;
+  --text-muted: #6b7280;
+  --accent-primary: #6366f1;
+  --accent-primary-contrast: #ffffff;
+  --accent-secondary: #22d3ee;
+  --state-success: #22c55e;
+  --state-warning: #f59e0b;
+  --state-danger: #ef4444;
+  --state-info: #38bdf8;
+  --money-positive: #4ade80;
+  --money-negative: #f87171;
+  --money-neutral: #e5e7eb;
+  --focus-ring: #818cf8;
+}
+
+[data-theme="dota"] {
+  --surface-0: #0e0b08;
+  --surface-1: #1a140d;
+  --surface-2: #251c12;
+  --border-default: #3a2c1a;
+  --border-strong: #56411f;
+  --text-primary: #f7efe1;
+  --text-secondary: #c9b393;
+  --text-muted: #8a765a;
+  --accent-primary: #c0392b;
+  --accent-primary-contrast: #ffffff;
+  --accent-secondary: #d4a24c;
+  --state-success: #4e9a51;
+  --state-warning: #d4a24c;
+  --state-danger: #c0392b;
+  --state-info: #5b8fb0;
+  --money-positive: #6fbf6f;
+  --money-negative: #e06a5c;
+  --money-neutral: #e5dccb;
+  --focus-ring: #d4a24c;
+}
+
+[data-theme="cs2"] {
+  --surface-0: #0a0d0c;
+  --surface-1: #121917;
+  --surface-2: #1a2320;
+  --border-default: #26332e;
+  --border-strong: #354a42;
+  --text-primary: #eef5f1;
+  --text-secondary: #a6c2b6;
+  --text-muted: #6d8579;
+  --accent-primary: #de9b35;
+  --accent-primary-contrast: #10130f;
+  --accent-secondary: #4fb286;
+  --state-success: #4fb286;
+  --state-warning: #de9b35;
+  --state-danger: #d94f4f;
+  --state-info: #4c9bd4;
+  --money-positive: #5fca92;
+  --money-negative: #e0685f;
+  --money-neutral: #dbe7e1;
+  --focus-ring: #de9b35;
+}
+
+[data-theme="valorant"] {
+  --surface-0: #0f0a0d;
+  --surface-1: #171015;
+  --surface-2: #201720;
+  --border-default: #32232d;
+  --border-strong: #4a3040;
+  --text-primary: #f5eef1;
+  --text-secondary: #c7a9b8;
+  --text-muted: #8c6f7c;
+  --accent-primary: #ff4655;
+  --accent-primary-contrast: #ffffff;
+  --accent-secondary: #17d4c0;
+  --state-success: #17d4c0;
+  --state-warning: #ece852;
+  --state-danger: #ff4655;
+  --state-info: #4ca2d4;
+  --money-positive: #4fd8b8;
+  --money-negative: #ff6b78;
+  --money-neutral: #e9dde3;
+  --focus-ring: #ff4655;
+}
+
+[data-theme="lol"] {
+  --surface-0: #080f14;
+  --surface-1: #0f1a20;
+  --surface-2: #16242c;
+  --border-default: #1e3540;
+  --border-strong: #2a4a58;
+  --text-primary: #eef7fb;
+  --text-secondary: #a6c9d6;
+  --text-muted: #6d8d99;
+  --accent-primary: #c8aa6e;
+  --accent-primary-contrast: #0a1428;
+  --accent-secondary: #0ac8b9;
+  --state-success: #0ac8b9;
+  --state-warning: #c8aa6e;
+  --state-danger: #e0524d;
+  --state-info: #4ca8d4;
+  --money-positive: #3fd6b4;
+  --money-negative: #e77f7a;
+  --money-neutral: #dce9ee;
+  --focus-ring: #c8aa6e;
+}
