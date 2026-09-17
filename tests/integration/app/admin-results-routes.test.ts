@@ -14,6 +14,7 @@ import { DrizzleMarketRepository } from "@/infra/db/repositories/market-reposito
 import { DrizzleOutcomeRepository } from "@/infra/db/repositories/outcome-repository";
 import { DrizzleOrderRepository } from "@/infra/db/repositories/order-repository";
 import { DrizzleWalletRepository } from "@/infra/db/repositories/wallet-repository";
+import { DrizzleRgLimitRepository } from "@/infra/db/repositories/rg-limit-repository";
 import { DrizzleBetSlipRepository } from "@/infra/db/repositories/bet-slip-repository";
 import { DrizzleBookRepository } from "@/infra/db/repositories/book";
 import { DrizzleAllocationRepository } from "@/infra/db/repositories/allocation-repository";
@@ -198,6 +199,7 @@ describe("admin results routes (T-613)", () => {
     betOrders: (tx, ownerId) => new DrizzleOrderRepository(tx, ownerId),
     book: (tx) => new DrizzleBookRepository(tx),
     allocations: (tx) => new DrizzleAllocationRepository(tx, ""),
+    rgLimits: (tx, ownerId) => new DrizzleRgLimitRepository(tx, ownerId),
     acquireMarketLock: (tx, marketId) => pgAdvisoryXactLock(tx, `market:${marketId}`),
     ledger,
     ids,

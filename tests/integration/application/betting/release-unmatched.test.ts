@@ -12,6 +12,7 @@ import { DrizzleUserRepository } from "@/infra/db/repositories/user-repository";
 import { DrizzleMarketRepository } from "@/infra/db/repositories/market-repository";
 import { DrizzleOutcomeRepository } from "@/infra/db/repositories/outcome-repository";
 import { DrizzleWalletRepository } from "@/infra/db/repositories/wallet-repository";
+import { DrizzleRgLimitRepository } from "@/infra/db/repositories/rg-limit-repository";
 import { DrizzleBetSlipRepository } from "@/infra/db/repositories/bet-slip-repository";
 import { DrizzleOrderRepository } from "@/infra/db/repositories/order-repository";
 import { DrizzleBookRepository } from "@/infra/db/repositories/book";
@@ -134,6 +135,7 @@ describe("releaseUnmatchedOnClose", () => {
     betOrders,
     book,
     allocations: (tx) => new DrizzleAllocationRepository(tx, ""),
+    rgLimits: (tx, ownerId) => new DrizzleRgLimitRepository(tx, ownerId),
     acquireMarketLock: (tx, marketId) => pgAdvisoryXactLock(tx, `market:${marketId}`),
     ledger,
     ids,

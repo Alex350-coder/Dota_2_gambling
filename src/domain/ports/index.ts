@@ -101,3 +101,4 @@ export type {
   IdempotencyKeyRecord,
   CreateIdempotencyKeyInput,
 } from "./idempotency-key-repository";
+export type { RgLimitRepository } from "./rg-limit-repository";

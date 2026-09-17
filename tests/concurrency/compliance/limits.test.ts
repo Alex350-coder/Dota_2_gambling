@@ -32,6 +32,7 @@ import { TransitionMarketUseCase } from "@/application/catalog/transition-market
 import { PlaceOrderUseCase } from "@/application/betting/place-order";
 import { testDbConfig } from "../../helpers/test-db-config";
 import { resetAndMigrate } from "../../helpers/reset-db";
+import { toBigIntRow } from "../../helpers/pg-bigint";
 
 class SystemClock {
   now(): Date {
@@ -39,22 +40,17 @@ class SystemClock {
   }
 }
 
-const SAMPLE_COUNT = 100;
-const P95_BUDGET_MS = 400;
-const P99_BUDGET_MS = 800;
-
-function percentile(sortedMs: readonly number[], p: number): number {
-  const index = Math.min(sortedMs.length - 1, Math.ceil((p / 100) * sortedMs.length) - 1);
-  return sortedMs[Math.max(0, index)]!;
-}
+const ITERATIONS = 50;
 
 /**
- * MET-PERF-03 (`Claude/Metrics.md`): `POST /api/v1/bets` end-to-end, including matching,
- * must be <= 400ms p95 and <= 800ms p99. Measured here at the use-case layer (skips HTTP
- * routing/session overhead) against each unmatched order's own fresh market, so every sample
- * exercises the full reserve+match transaction, not a cache-warmed repeat of the same row.
+ * P8 acceptance criterion (T-809) — real Postgres, `Promise.allSettled` races two concurrent
+ * placements against a single STAKE limit per iteration, `ITERATIONS` repeats to catch flaky
+ * interleavings: the limit check + reservation happen inside the same DB transaction
+ * (`assertWithinStakeLimits` runs before `ledger.post` inside `PlaceOrderUseCase.execute`), so
+ * the wallet's `FOR UPDATE` lock must serialize the racing attempts and no joint overage can
+ * occur.
  */
-describe("PlaceOrderUseCase latency (MET-PERF-03)", () => {
+describe("PlaceOrderUseCase concurrency — RG limits (T-809)", () => {
   const pool = createPool(testDbConfig());
   const db = createDb(pool);
   const uow = new DrizzleUnitOfWork(db);
@@ -162,7 +158,18 @@ describe("PlaceOrderUseCase latency (MET-PERF-03)", () => {
     return userId;
   }
 
-  async function createOpenMarket(): Promise<{ marketId: string; outcomeAId: string }> {
+  async function setStakeLimit(userId: string, valueMinor: bigint): Promise<void> {
+    await pool.query(
+      "INSERT INTO rg_limits (user_id, kind, period, current_value) VALUES ($1, 'STAKE', 'DAY', $2)",
+      [userId, valueMinor],
+    );
+  }
+
+  async function createOpenMarket(): Promise<{
+    marketId: string;
+    outcomeAId: string;
+    outcomeBId: string;
+  }> {
     const actorId = await createUser();
     const game = await createGame.execute({ actorId, slug: `g-${randomUUID()}`, name: "G" });
     const [modeRow] = await pool
@@ -216,40 +223,59 @@ describe("PlaceOrderUseCase latency (MET-PERF-03)", () => {
         { code: "TEAM_B", label: "Team B" },
       ],
     });
-    await transitionMarket.execute({ actorId, marketId: market.id, actor: "ADMIN", to: "OPEN" });
+    const opened = await transitionMarket.execute({
+      actorId,
+      marketId: market.id,
+      actor: "ADMIN",
+      to: "OPEN",
+    });
+    expect(opened.status).toBe("OPEN");
 
-    const outcomeRows = await pool
+    const outcomes = await pool
       .query("SELECT id, code FROM outcomes WHERE market_id = $1", [market.id])
       .then((r) => r.rows as { id: string; code: string }[]);
-    const outcomeA = outcomeRows.find((row) => row.code === "TEAM_A");
-    if (!outcomeA) throw new Error("outcome fixture missing");
+    const outcomeA = outcomes.find((row) => row.code === "TEAM_A");
+    const outcomeB = outcomes.find((row) => row.code === "TEAM_B");
+    if (!outcomeA || !outcomeB) throw new Error("outcome fixture missing");
 
-    return { marketId: market.id, outcomeAId: outcomeA.id };
+    return { marketId: market.id, outcomeAId: outcomeA.id, outcomeBId: outcomeB.id };
   }
 
-  it(`placement latency stays within ${P95_BUDGET_MS}ms p95 / ${P99_BUDGET_MS}ms p99`, async () => {
-    const samplesMs: number[] = [];
+  it("two racing placements never jointly exceed the caller's STAKE limit", async () => {
+    for (let i = 0; i < ITERATIONS; i++) {
+      const { marketId, outcomeAId, outcomeBId } = await createOpenMarket();
+      const userId = await createUser(50_000n);
+      await setStakeLimit(userId, 1_500n);
 
-    for (let i = 0; i < SAMPLE_COUNT; i++) {
-      const { marketId, outcomeAId } = await createOpenMarket();
-      const userId = await createUser();
+      const results = await Promise.allSettled([
+        placeOrder.execute({
+          userId,
+          marketId,
+          outcomeId: outcomeAId,
+          requestedMinor: 1_000n,
+          idempotencyKey: randomUUID(),
+        }),
+        placeOrder.execute({
+          userId,
+          marketId,
+          outcomeId: outcomeBId,
+          requestedMinor: 1_000n,
+          idempotencyKey: randomUUID(),
+        }),
+      ]);
 
-      const start = performance.now();
-      await placeOrder.execute({
-        userId,
-        marketId,
-        outcomeId: outcomeAId,
-        requestedMinor: 5_000n,
-        idempotencyKey: randomUUID(),
-      });
-      samplesMs.push(performance.now() - start);
+      const fulfilled = results.filter((r) => r.status === "fulfilled");
+      expect(fulfilled.length).toBeLessThanOrEqual(1);
+
+      const orders = await pool
+        .query("SELECT requested_minor FROM bet_orders WHERE user_id = $1", [userId])
+        .then((r) =>
+          (r.rows as { requested_minor: bigint }[]).map(
+            (row) => toBigIntRow(row, ["requested_minor"]).requested_minor,
+          ),
+        );
+      const totalStaked = orders.reduce((sum, requested) => sum + requested, 0n);
+      expect(totalStaked).toBeLessThanOrEqual(1_500n);
     }
-
-    const sorted = [...samplesMs].sort((a, b) => a - b);
-    const p95 = percentile(sorted, 95);
-    const p99 = percentile(sorted, 99);
-
-    expect(p95).toBeLessThanOrEqual(P95_BUDGET_MS);
-    expect(p99).toBeLessThanOrEqual(P99_BUDGET_MS);
   }, 30_000);
 });
