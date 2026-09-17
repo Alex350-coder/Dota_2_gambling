@@ -42,4 +42,17 @@ export interface LedgerWriter<Tx = unknown> {
    * rather than a new one since `LedgerService` already owns `ledger_entries` reads/writes.
    */
   balanceOf(tx: Tx, accountKey: string, currency: string): Promise<bigint>;
+
+  /**
+   * Sum of `signed_amount_minor` posted to `accountKey` by transactions of `kind` since
+   * `since` (inclusive) — backs ledger-derived caps such as MET-RG-04's simulated-credit daily
+   * cap, which must never be enforced against a cached counter.
+   */
+  sumEntriesSince(
+    tx: Tx,
+    accountKey: string,
+    currency: string,
+    kind: LedgerTransactionKind,
+    since: Date,
+  ): Promise<bigint>;
 }

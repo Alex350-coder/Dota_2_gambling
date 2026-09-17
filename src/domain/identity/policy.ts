@@ -15,7 +15,8 @@ export type Action =
   | "bet:place"
   | "bet:manage"
   | "result:manage"
-  | "settlement:manage";
+  | "settlement:manage"
+  | "wallet:credit";
 
 export interface Actor {
   readonly roles: readonly Role[];
@@ -58,6 +59,9 @@ const POLICY: Readonly<Record<Action, ActionRule>> = {
   // never places or cancels a bet as another user.
   "bet:place": { roles: ["USER"], anyOwner: ["ADMIN"] },
   "bet:manage": { roles: ["USER"], anyOwner: ["ADMIN"] },
+  // Simulated credit is always self-service — no admin-as-user bypass, matching mfa:manage's
+  // rationale (RESPONSIBLE_GAMBLING.md: money-in events are always the account holder's own act).
+  "wallet:credit": { roles: ["USER"], anyOwner: [] },
 };
 
 /**

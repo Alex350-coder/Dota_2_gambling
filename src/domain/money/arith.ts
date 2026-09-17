@@ -15,6 +15,12 @@ export function negate(amount: Minor): bigint {
   return 0n - amount;
 }
 
+/** True when `current + addition` would exceed `cap` — the shared shape behind every
+ * ledger-derived spending/credit cap (e.g. MET-RG-04's simulated-credit daily cap). */
+export function exceedsCap(current: bigint, addition: bigint, cap: bigint): boolean {
+  return current + addition > cap;
+}
+
 function toBpsBigInt(bps: number): bigint {
   assertValidBps(bps);
   return BigInt(bps);

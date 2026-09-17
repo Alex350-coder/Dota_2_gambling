@@ -85,6 +85,7 @@ import {
   ListBetsUseCase,
   GetBetUseCase,
 } from "@/application/betting";
+import { buildWalletUseCases, type WalletUseCases } from "./container-wallet";
 import {
   ProposeResultUseCase,
   ConfirmResultUseCase,
@@ -93,7 +94,7 @@ import {
 } from "@/application/results";
 import { buildSettlementUseCases, type SettlementUseCases } from "./container-settlement";
 
-export interface Container extends SettlementUseCases<DbTx> {
+export interface Container extends SettlementUseCases<DbTx>, WalletUseCases<DbTx> {
   readonly config: Config;
   readonly clock: Clock;
   readonly uow: DrizzleUnitOfWork;
@@ -381,6 +382,7 @@ export function getContainer(): Container {
       clock,
       audit,
     }),
+    ...buildWalletUseCases({ uow, users, wallets, ledger, ids, clock, audit, config }),
     cancelOrder: new CancelOrderUseCase<DbTx>({
       uow,
       markets,

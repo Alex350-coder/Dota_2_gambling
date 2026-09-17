@@ -97,4 +97,24 @@ describe("DrizzleWalletRepository", () => {
 
     expect(wallet).toBeNull();
   });
+
+  it("ensureForUpdate creates a zero-balance wallet when none exists", async () => {
+    const wallet = await uow.run((tx: DbTx) =>
+      new DrizzleWalletRepository(tx, userAId).ensureForUpdate("USD"),
+    );
+
+    expect(wallet.userId).toBe(userAId);
+    expect(wallet.currency).toBe("USD");
+    expect(wallet.availableMinor).toBe(0n);
+    expect(wallet.lockedMinor).toBe(0n);
+  });
+
+  it("ensureForUpdate is idempotent and returns the existing wallet unchanged", async () => {
+    const wallet = await uow.run((tx: DbTx) =>
+      new DrizzleWalletRepository(tx, userAId).ensureForUpdate("PEN"),
+    );
+
+    expect(wallet.availableMinor).toBe(5000n);
+    expect(wallet.lockedMinor).toBe(1000n);
+  });
 });

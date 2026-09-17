@@ -272,6 +272,26 @@ export function betPlacedEvent(
 }
 
 /**
+ * Wallet event builders (T-807). `amountMinor` is carried as a string (ledger amounts are
+ * `bigint`, which `JSON.stringify` cannot serialize) so a reviewer can see the credited amount
+ * without joining back to `ledger_entries`.
+ */
+export function simulatedCreditEvent(
+  userId: string,
+  ledgerTransactionId: string,
+  amountMinor: string,
+): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId: userId,
+    action: "SIMULATED_CREDIT_APPLIED",
+    entityType: "wallet",
+    entityId: userId,
+    after: { ledgerTransactionId, amountMinor },
+  };
+}
+
+/**
  * `actorId` is `null` for system-driven cancellations (e.g. market-close release).
  * `ledgerTransactionId` is `undefined` when there was nothing left to refund (the order had no
  * unmatched stake), so cancelling it posted no ledger transaction at all.
