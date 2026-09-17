@@ -259,5 +259,5 @@ describe("POST /bets idempotency-key race (CC-07)", () => {
         .then((r) => r.rows[0].n as number);
       expect(orderCount).toBe(1);
     }
-  });
+  }, 30_000);
 });

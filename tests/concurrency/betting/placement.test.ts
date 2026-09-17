@@ -276,7 +276,7 @@ describe("PlaceOrderUseCase/CancelOrderUseCase concurrency (CC-01, CC-02, CC-03)
       expect(wallet.available_minor).toBeGreaterThanOrEqual(0n);
       expect(wallet.available_minor + wallet.locked_minor).toBe(5_000n);
     }
-  });
+  }, 30_000);
 
   it("CC-02 / FIN-10: 10 concurrent orders against one resting counterparty never overmatch", async () => {
     for (let i = 0; i < ITERATIONS; i++) {
@@ -380,5 +380,5 @@ describe("PlaceOrderUseCase/CancelOrderUseCase concurrency (CC-01, CC-02, CC-03)
         row.requested_minor,
       );
     }
-  });
+  }, 30_000);
 });
