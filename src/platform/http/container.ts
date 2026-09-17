@@ -33,9 +33,9 @@ import {
   DrizzleAllocationRepository,
   DrizzleMarketResultRepository,
   DrizzleSettlementRunRepository,
+  DrizzleRgLimitRepository,
   LedgerService,
   RateLimiter,
-  pgAdvisoryXactLock,
 } from "@/infra/db";
 import { ManualAdminResultProvider } from "@/infra/results";
 import { loadConfig, type Config } from "@/platform/config";
@@ -78,14 +78,9 @@ import {
   TransitionMarketUseCase,
   CloseMarketsUseCase,
 } from "@/application/catalog";
-import {
-  releaseUnmatchedOnClose,
-  PlaceOrderUseCase,
-  CancelOrderUseCase,
-  ListBetsUseCase,
-  GetBetUseCase,
-} from "@/application/betting";
+import { releaseUnmatchedOnClose } from "@/application/betting";
 import { buildWalletUseCases, type WalletUseCases } from "./container-wallet";
+import { buildBettingUseCases, type BettingUseCases } from "./container-betting";
 import {
   ProposeResultUseCase,
   ConfirmResultUseCase,
@@ -94,7 +89,8 @@ import {
 } from "@/application/results";
 import { buildSettlementUseCases, type SettlementUseCases } from "./container-settlement";
 
-export interface Container extends SettlementUseCases<DbTx>, WalletUseCases<DbTx> {
+export interface Container
+  extends SettlementUseCases<DbTx>, WalletUseCases<DbTx>, BettingUseCases<DbTx> {
   readonly config: Config;
   readonly clock: Clock;
   readonly uow: DrizzleUnitOfWork;
@@ -132,6 +128,7 @@ export interface Container extends SettlementUseCases<DbTx>, WalletUseCases<DbTx
   readonly allocationsForOwner: (tx: DbTx, ownerId: string) => DrizzleAllocationRepository;
   readonly marketResults: (tx: DbTx) => DrizzleMarketResultRepository;
   readonly settlementRuns: (tx: DbTx) => DrizzleSettlementRunRepository;
+  readonly rgLimits: (tx: DbTx, ownerId: string) => DrizzleRgLimitRepository;
   readonly ledger: LedgerService;
   readonly listGames: ListGamesUseCase<DbTx>;
   readonly getGame: GetGameUseCase<DbTx>;
@@ -156,10 +153,6 @@ export interface Container extends SettlementUseCases<DbTx>, WalletUseCases<DbTx
   readonly createMarket: CreateMarketUseCase<DbTx>;
   readonly transitionMarket: TransitionMarketUseCase<DbTx>;
   readonly closeMarkets: CloseMarketsUseCase<DbTx>;
-  readonly placeOrder: PlaceOrderUseCase<DbTx>;
-  readonly cancelOrder: CancelOrderUseCase<DbTx>;
-  readonly listBets: ListBetsUseCase<DbTx>;
-  readonly getBet: GetBetUseCase<DbTx>;
   readonly proposeResult: ProposeResultUseCase<DbTx>;
   readonly confirmResult: ConfirmResultUseCase<DbTx>;
   readonly disputeResult: DisputeResultUseCase<DbTx>;
@@ -218,6 +211,7 @@ export function getContainer(): Container {
     new DrizzleAllocationRepository(tx, ownerId);
   const marketResults = (tx: DbTx) => new DrizzleMarketResultRepository(tx);
   const settlementRuns = (tx: DbTx) => new DrizzleSettlementRunRepository(tx);
+  const rgLimits = (tx: DbTx, ownerId: string) => new DrizzleRgLimitRepository(tx, ownerId);
   const resultProvider = new ManualAdminResultProvider();
   const ledger = new LedgerService(ids, clock);
 
@@ -325,6 +319,7 @@ export function getContainer(): Container {
     allocationsForOwner,
     marketResults,
     settlementRuns,
+    rgLimits,
     ledger,
     listGames: new ListGamesUseCase<DbTx>({ uow, games }),
     getGame: new GetGameUseCase<DbTx>({ uow, games }),
@@ -364,7 +359,8 @@ export function getContainer(): Container {
     }),
     transitionMarket,
     closeMarkets: new CloseMarketsUseCase<DbTx>({ uow, markets, transitionMarket, clock }),
-    placeOrder: new PlaceOrderUseCase<DbTx>({
+    ...buildWalletUseCases({ uow, users, wallets, ledger, ids, clock, audit, config }),
+    ...buildBettingUseCases({
       uow,
       markets,
       outcomes,
@@ -376,25 +372,13 @@ export function getContainer(): Container {
       betOrders,
       book,
       allocations,
-      acquireMarketLock: (tx, marketId) => pgAdvisoryXactLock(tx, `market:${marketId}`),
+      allocationsForOwner,
+      rgLimits,
       ledger,
       ids,
       clock,
       audit,
     }),
-    ...buildWalletUseCases({ uow, users, wallets, ledger, ids, clock, audit, config }),
-    cancelOrder: new CancelOrderUseCase<DbTx>({
-      uow,
-      markets,
-      economicProfiles,
-      betOrders,
-      ledger,
-      ids,
-      clock,
-      audit,
-    }),
-    listBets: new ListBetsUseCase<DbTx>({ uow, betOrders }),
-    getBet: new GetBetUseCase<DbTx>({ uow, betOrders, allocations: allocationsForOwner }),
     proposeResult: new ProposeResultUseCase<DbTx>({
       ...resultsDeps,
       markets,

@@ -15,12 +15,14 @@ import type {
   LedgerWriter,
   MarketRepository,
   OutcomeRepository,
+  RgLimitRepository,
   StreamerRepository,
   UnitOfWork,
   UserRepository,
   WalletRepository,
 } from "@/domain/ports";
 import { betPlacedEvent } from "@/application/audit/writer";
+import { assertWithinStakeLimits } from "@/application/compliance";
 import { matchIncomingOrder } from "./match";
 
 /**
@@ -55,6 +57,7 @@ export interface PlaceOrderDeps<Tx> {
   readonly book: (tx: Tx) => BookRepository;
   readonly allocations: (tx: Tx) => AllocationRepository;
   readonly acquireMarketLock: (tx: Tx, marketId: string) => Promise<void>;
+  readonly rgLimits: (tx: Tx, ownerId: string) => RgLimitRepository;
   readonly ledger: LedgerWriter<Tx>;
   readonly ids: IdGenerator;
   readonly clock: Clock;
@@ -140,6 +143,12 @@ export class PlaceOrderUseCase<Tx> {
           },
         });
       }
+
+      await assertWithinStakeLimits(
+        tx,
+        { rgLimits: this.deps.rgLimits, ledger: this.deps.ledger, clock: this.deps.clock },
+        { userId: input.userId, currency: economicProfile.currency, requestedMinor },
+      );
 
       const orderId = this.deps.ids.next();
 

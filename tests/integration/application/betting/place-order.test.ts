@@ -12,6 +12,7 @@ import { DrizzleUserRepository } from "@/infra/db/repositories/user-repository";
 import { DrizzleMarketRepository } from "@/infra/db/repositories/market-repository";
 import { DrizzleOutcomeRepository } from "@/infra/db/repositories/outcome-repository";
 import { DrizzleWalletRepository } from "@/infra/db/repositories/wallet-repository";
+import { DrizzleRgLimitRepository } from "@/infra/db/repositories/rg-limit-repository";
 import { DrizzleBetSlipRepository } from "@/infra/db/repositories/bet-slip-repository";
 import { DrizzleOrderRepository } from "@/infra/db/repositories/order-repository";
 import { DrizzleBookRepository } from "@/infra/db/repositories/book";
@@ -122,6 +123,7 @@ describe("PlaceOrderUseCase", () => {
     betOrders: (tx, ownerId) => new DrizzleOrderRepository(tx, ownerId),
     book: (tx) => new DrizzleBookRepository(tx),
     allocations: (tx) => new DrizzleAllocationRepository(tx, ""),
+    rgLimits: (tx, ownerId) => new DrizzleRgLimitRepository(tx, ownerId),
     acquireMarketLock: (tx, marketId) => pgAdvisoryXactLock(tx, `market:${marketId}`),
     ledger,
     ids,
@@ -423,5 +425,104 @@ describe("PlaceOrderUseCase", () => {
         idempotencyKey: randomUUID(),
       }),
     ).rejects.toMatchObject({ code: "ACCOUNT_SUSPENDED" });
+  });
+
+  async function setStakeLimit(userId: string, period: string, valueMinor: bigint): Promise<void> {
+    await pool.query(
+      "INSERT INTO rg_limits (user_id, kind, period, current_value) VALUES ($1, 'STAKE', $2, $3)",
+      [userId, period, valueMinor],
+    );
+  }
+
+  async function setSingleBetLimit(userId: string, valueMinor: bigint): Promise<void> {
+    await pool.query(
+      "INSERT INTO rg_limits (user_id, kind, period, current_value) VALUES ($1, 'SINGLE_BET', 'PER_BET', $2)",
+      [userId, valueMinor],
+    );
+  }
+
+  it("rejects a stake that would exceed the caller's daily STAKE limit (T-809)", async () => {
+    const { marketId, outcomeId } = await createOpenMarket();
+    const userId = await createUser(50_000n);
+    await setStakeLimit(userId, "DAY", 1_500n);
+
+    await placeOrder.execute({
+      userId,
+      marketId,
+      outcomeId,
+      requestedMinor: 1_000n,
+      idempotencyKey: randomUUID(),
+    });
+
+    await expect(
+      placeOrder.execute({
+        userId,
+        marketId,
+        outcomeId,
+        requestedMinor: 1_000n,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toMatchObject({ code: "LIMIT_EXCEEDED" });
+
+    const orders = await pool
+      .query("SELECT id FROM bet_orders WHERE user_id = $1", [userId])
+      .then((r) => r.rows);
+    expect(orders).toHaveLength(1);
+  });
+
+  it("evaluates the STAKE limit against ledger-derived totals, not a cached counter", async () => {
+    const { marketId, outcomeId } = await createOpenMarket();
+    const userId = await createUser(50_000n);
+    await setStakeLimit(userId, "DAY", 3_000n);
+
+    await placeOrder.execute({
+      userId,
+      marketId,
+      outcomeId,
+      requestedMinor: 1_000n,
+      idempotencyKey: randomUUID(),
+    });
+    await placeOrder.execute({
+      userId,
+      marketId,
+      outcomeId,
+      requestedMinor: 1_000n,
+      idempotencyKey: randomUUID(),
+    });
+
+    const order = await placeOrder.execute({
+      userId,
+      marketId,
+      outcomeId,
+      requestedMinor: 1_000n,
+      idempotencyKey: randomUUID(),
+    });
+    expect(order.requestedMinor).toBe(1_000n);
+
+    await expect(
+      placeOrder.execute({
+        userId,
+        marketId,
+        outcomeId,
+        requestedMinor: 2_001n,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toMatchObject({ code: "LIMIT_EXCEEDED" });
+  });
+
+  it("rejects a single stake above the caller's SINGLE_BET limit", async () => {
+    const { marketId, outcomeId } = await createOpenMarket();
+    const userId = await createUser(50_000n);
+    await setSingleBetLimit(userId, 900n);
+
+    await expect(
+      placeOrder.execute({
+        userId,
+        marketId,
+        outcomeId,
+        requestedMinor: 1_000n,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toMatchObject({ code: "LIMIT_EXCEEDED" });
   });
 });

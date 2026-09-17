@@ -11,3 +11,4 @@ export {
   type LimitChangeResult,
   type SelfExclusionPeriod,
 } from "./limits";
+export { periodStart, type RollingLimitPeriod } from "./period";
