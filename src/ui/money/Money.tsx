@@ -1,5 +1,3 @@
-import { isMinor } from "@/domain/money";
-
 /** Currencies this component knows how to split into major/minor units. All are 2-decimal today (Validation.md). */
 const MINOR_UNITS_PER_MAJOR = 100n;
 
@@ -57,6 +55,3 @@ export function Money({ amountMinor, currency, signed = false, className }: Mone
 export function isValidAmountMinorInput(value: string): boolean {
   return /^[1-9]\d*$/.test(value);
 }
-
-/** Re-exported so callers can validate a parsed bigint is a well-formed `Minor` before display. */
-export { isMinor };

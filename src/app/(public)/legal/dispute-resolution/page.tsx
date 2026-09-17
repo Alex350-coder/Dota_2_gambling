@@ -21,7 +21,9 @@ export default function DisputeResolutionPage() {
 
       <h2>3. Timeframes</h2>
       <p>
-        Response and resolution timeframes are <strong>DECISION REQUIRED</strong>.
+        Response and resolution timeframes are <strong>LEGAL VALIDATION REQUIRED</strong> (they must
+        account for jurisdiction-specific consumer-protection windows, not just an internal
+        operational preference).
       </p>
 
       <h2>4. Escalation and consumer-protection route</h2>
