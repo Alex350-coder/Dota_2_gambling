@@ -1,6 +1,10 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import type { Clock, IdGenerator, LedgerPostInput, LedgerWriter } from "@/domain/ports";
-import { createLedgerTransaction, type LedgerTransaction } from "@/domain/ledger";
+import {
+  createLedgerTransaction,
+  type LedgerTransaction,
+  type LedgerTransactionKind,
+} from "@/domain/ledger";
 import { DomainError } from "@/domain/errors";
 import { ledgerEntries, ledgerTransactions } from "./schema/ledger";
 import { wallets } from "./schema/wallet";
@@ -78,6 +82,29 @@ export class LedgerService implements LedgerWriter<DbTx> {
       .select({ total: sql<string | null>`sum(${ledgerEntries.signedAmountMinor})` })
       .from(ledgerEntries)
       .where(and(eq(ledgerEntries.accountKey, accountKey), eq(ledgerEntries.currency, currency)));
+
+    return row?.total === null || row?.total === undefined ? 0n : BigInt(row.total);
+  }
+
+  async sumEntriesSince(
+    tx: DbTx,
+    accountKey: string,
+    currency: string,
+    kind: LedgerTransactionKind,
+    since: Date,
+  ): Promise<bigint> {
+    const [row] = await tx
+      .select({ total: sql<string | null>`sum(${ledgerEntries.signedAmountMinor})` })
+      .from(ledgerEntries)
+      .innerJoin(ledgerTransactions, eq(ledgerEntries.transactionId, ledgerTransactions.id))
+      .where(
+        and(
+          eq(ledgerEntries.accountKey, accountKey),
+          eq(ledgerEntries.currency, currency),
+          eq(ledgerTransactions.kind, kind),
+          gte(ledgerEntries.createdAt, since),
+        ),
+      );
 
     return row?.total === null || row?.total === undefined ? 0n : BigInt(row.total);
   }

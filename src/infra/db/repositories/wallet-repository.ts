@@ -29,6 +29,19 @@ export class DrizzleWalletRepository implements WalletRepository {
     return row ? this.toWallet(row) : null;
   }
 
+  async ensureForUpdate(currency: string): Promise<Wallet> {
+    await this.tx
+      .insert(wallets)
+      .values({ userId: this.ownerId, currency })
+      .onConflictDoNothing({ target: [wallets.userId, wallets.currency] });
+
+    const wallet = await this.findByCurrencyForUpdate(currency);
+    if (!wallet) {
+      throw new Error(`wallet ${this.ownerId}/${currency} missing immediately after ensure`);
+    }
+    return wallet;
+  }
+
   private toWallet(row: typeof wallets.$inferSelect): Wallet {
     return {
       userId: row.userId,

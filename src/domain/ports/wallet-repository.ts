@@ -21,4 +21,11 @@ export interface WalletRepository {
    * surfacing as an unmapped SQL error instead of a clean DomainError.
    */
   findByCurrencyForUpdate(currency: string): Promise<Wallet | null>;
+
+  /**
+   * Idempotently provisions a zero-balance wallet row for the owner/currency pair if one does
+   * not already exist, then returns it locked `FOR UPDATE` — the entry point for a user's first
+   * money-in event (RULE-F03: only the ledger's wallet-projection writer creates/mutates rows).
+   */
+  ensureForUpdate(currency: string): Promise<Wallet>;
 }
