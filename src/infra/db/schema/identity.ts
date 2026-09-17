@@ -33,6 +33,8 @@ export const users = pgTable("users", {
   dateOfBirth: text("date_of_birth").notNull(),
   mfaSecretEnc: text("mfa_secret_enc"),
   mfaEnabledAt: timestamp("mfa_enabled_at", { withTimezone: true }),
+  /** Set when status = SELF_EXCLUDED; irrevocable before this instant (RULE-K07). */
+  revocableAt: timestamp("revocable_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

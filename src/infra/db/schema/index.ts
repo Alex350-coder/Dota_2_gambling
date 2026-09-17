@@ -8,3 +8,4 @@ export * from "./catalog";
 export * from "./betting";
 export * from "./settlement";
 export * from "./platform";
+export * from "./compliance";
