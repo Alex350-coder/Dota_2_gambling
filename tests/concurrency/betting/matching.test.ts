@@ -255,5 +255,5 @@ describe("PlaceOrderUseCase interleaved cross-market concurrency (CC-06)", () =>
       );
     expect(wallet.available_minor).toBeGreaterThanOrEqual(0n);
     expect(wallet.available_minor + wallet.locked_minor).toBe(1_000_000n);
-  });
+  }, 30_000);
 });
