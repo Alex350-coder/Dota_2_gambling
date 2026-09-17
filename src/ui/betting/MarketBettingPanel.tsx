@@ -4,7 +4,7 @@ import { useState } from "react";
 import { BetForm, type BetOrderResponse } from "./BetForm";
 import { OrderCard } from "./OrderCard";
 
-export interface MarketOutcome {
+interface MarketOutcome {
   readonly outcomeId: string;
   readonly label: string;
 }

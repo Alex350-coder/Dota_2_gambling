@@ -7,5 +7,6 @@
     "scripts/**/!(*.test).ts"
   ],
   "ignore": ["tooling/__fixtures__/**"],
-  "ignoreDependencies": ["eslint-config-next", "lint-staged"]
+  "ignoreDependencies": ["eslint-config-next", "lint-staged"],
+  "ignoreBinaries": ["openssl"]
 }
