@@ -102,3 +102,8 @@ export type {
   CreateIdempotencyKeyInput,
 } from "./idempotency-key-repository";
 export type { RgLimitRepository } from "./rg-limit-repository";
+export type {
+  SelfExclusionRepository,
+  SelfExclusionRecord,
+  CreateSelfExclusionInput,
+} from "./self-exclusion-repository";

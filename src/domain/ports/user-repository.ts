@@ -8,6 +8,8 @@ export interface UserRecord {
   readonly status: UserStatus;
   readonly dateOfBirth: string;
   readonly emailVerifiedAt: Date | null;
+  /** Set when `status = SELF_EXCLUDED`; `null` means permanent (never automatically revocable). */
+  readonly revocableAt: Date | null;
   readonly mfaSecretEnc: string | null;
   readonly mfaEnabledAt: Date | null;
   readonly createdAt: Date;
@@ -34,4 +36,6 @@ export interface UserRepository {
   setMfaSecret(userId: string, mfaSecretEnc: string, updatedAt: Date): Promise<void>;
   activateMfa(userId: string, enabledAt: Date): Promise<void>;
   disableMfa(userId: string, updatedAt: Date): Promise<void>;
+  setSelfExcluded(userId: string, revocableAt: Date | null, updatedAt: Date): Promise<void>;
+  updateStatus(userId: string, status: UserStatus, updatedAt: Date): Promise<void>;
 }

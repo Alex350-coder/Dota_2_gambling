@@ -34,6 +34,7 @@ import {
   DrizzleMarketResultRepository,
   DrizzleSettlementRunRepository,
   DrizzleRgLimitRepository,
+  DrizzleSelfExclusionRepository,
   LedgerService,
   RateLimiter,
 } from "@/infra/db";
@@ -88,9 +89,14 @@ import {
   ResolveDisputeUseCase,
 } from "@/application/results";
 import { buildSettlementUseCases, type SettlementUseCases } from "./container-settlement";
+import { buildComplianceUseCases, type ComplianceUseCases } from "./container-compliance";
 
 export interface Container
-  extends SettlementUseCases<DbTx>, WalletUseCases<DbTx>, BettingUseCases<DbTx> {
+  extends
+    SettlementUseCases<DbTx>,
+    WalletUseCases<DbTx>,
+    BettingUseCases<DbTx>,
+    ComplianceUseCases<DbTx> {
   readonly config: Config;
   readonly clock: Clock;
   readonly uow: DrizzleUnitOfWork;
@@ -129,6 +135,7 @@ export interface Container
   readonly marketResults: (tx: DbTx) => DrizzleMarketResultRepository;
   readonly settlementRuns: (tx: DbTx) => DrizzleSettlementRunRepository;
   readonly rgLimits: (tx: DbTx, ownerId: string) => DrizzleRgLimitRepository;
+  readonly selfExclusions: (tx: DbTx, ownerId: string) => DrizzleSelfExclusionRepository;
   readonly ledger: LedgerService;
   readonly listGames: ListGamesUseCase<DbTx>;
   readonly getGame: GetGameUseCase<DbTx>;
@@ -212,6 +219,8 @@ export function getContainer(): Container {
   const marketResults = (tx: DbTx) => new DrizzleMarketResultRepository(tx);
   const settlementRuns = (tx: DbTx) => new DrizzleSettlementRunRepository(tx);
   const rgLimits = (tx: DbTx, ownerId: string) => new DrizzleRgLimitRepository(tx, ownerId);
+  const selfExclusions = (tx: DbTx, ownerId: string) =>
+    new DrizzleSelfExclusionRepository(tx, ownerId);
   const resultProvider = new ManualAdminResultProvider();
   const ledger = new LedgerService(ids, clock);
 
@@ -320,6 +329,7 @@ export function getContainer(): Container {
     marketResults,
     settlementRuns,
     rgLimits,
+    selfExclusions,
     ledger,
     listGames: new ListGamesUseCase<DbTx>({ uow, games }),
     getGame: new GetGameUseCase<DbTx>({ uow, games }),
@@ -379,6 +389,7 @@ export function getContainer(): Container {
       clock,
       audit,
     }),
+    ...buildComplianceUseCases({ uow, users, selfExclusions, ids, clock, audit }),
     proposeResult: new ProposeResultUseCase<DbTx>({
       ...resultsDeps,
       markets,
