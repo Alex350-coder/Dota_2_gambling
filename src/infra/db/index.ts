@@ -32,3 +32,4 @@ export { LedgerService } from "./ledger";
 export { DrizzleMarketResultRepository } from "./repositories/market-result-repository";
 export { DrizzleSettlementRunRepository } from "./repositories/settlement-run-repository";
 export { DrizzleRgLimitRepository } from "./repositories/rg-limit-repository";
+export { DrizzleSelfExclusionRepository } from "./repositories/self-exclusion-repository";

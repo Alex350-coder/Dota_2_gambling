@@ -64,6 +64,17 @@ export class DrizzleUserRepository implements UserRepository {
       .set({ mfaSecretEnc: null, mfaEnabledAt: null, updatedAt })
       .where(eq(users.id, userId));
   }
+
+  async setSelfExcluded(userId: string, revocableAt: Date | null, updatedAt: Date): Promise<void> {
+    await this.tx
+      .update(users)
+      .set({ status: "SELF_EXCLUDED", revocableAt, updatedAt })
+      .where(eq(users.id, userId));
+  }
+
+  async updateStatus(userId: string, status: UserRecord["status"], updatedAt: Date): Promise<void> {
+    await this.tx.update(users).set({ status, updatedAt }).where(eq(users.id, userId));
+  }
 }
 
 function toUserRecord(row: typeof users.$inferSelect): UserRecord {
@@ -74,6 +85,7 @@ function toUserRecord(row: typeof users.$inferSelect): UserRecord {
     status: row.status,
     dateOfBirth: row.dateOfBirth,
     emailVerifiedAt: row.emailVerifiedAt,
+    revocableAt: row.revocableAt,
     mfaSecretEnc: row.mfaSecretEnc,
     mfaEnabledAt: row.mfaEnabledAt,
     createdAt: row.createdAt,

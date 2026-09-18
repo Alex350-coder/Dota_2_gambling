@@ -291,6 +291,49 @@ export function simulatedCreditEvent(
   };
 }
 
+/** Self-exclusion event builders (T-810). */
+export function selfExcludedEvent(userId: string, period: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId: userId,
+    action: "SELF_EXCLUDED",
+    entityType: "user",
+    entityId: userId,
+    after: { period },
+  };
+}
+
+/** Recorded even though the rejected action never mutated anything, per
+ * RESPONSIBLE_GAMBLING.md §3: "an admin action attempting to [shorten a self-exclusion] is
+ * rejected and audit-logged." */
+export function selfExclusionShortenRejectedEvent(
+  adminId: string,
+  userId: string,
+): AuditEventInput {
+  return {
+    actorType: "admin",
+    actorId: adminId,
+    action: "SELF_EXCLUSION_SHORTEN_REJECTED",
+    entityType: "user",
+    entityId: userId,
+  };
+}
+
+export function userStatusChangedEvent(
+  adminId: string,
+  userId: string,
+  status: string,
+): AuditEventInput {
+  return {
+    actorType: "admin",
+    actorId: adminId,
+    action: "USER_STATUS_CHANGED",
+    entityType: "user",
+    entityId: userId,
+    after: { status },
+  };
+}
+
 /**
  * `actorId` is `null` for system-driven cancellations (e.g. market-close release).
  * `ledgerTransactionId` is `undefined` when there was nothing left to refund (the order had no

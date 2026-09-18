@@ -12,3 +12,4 @@ export {
   type SelfExclusionPeriod,
 } from "./limits";
 export { periodStart, type RollingLimitPeriod } from "./period";
+export { assertAdminCanChangeStatus } from "./self-exclusion-guard";
