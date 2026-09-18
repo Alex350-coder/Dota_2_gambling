@@ -55,4 +55,17 @@ export interface LedgerWriter<Tx = unknown> {
     kind: LedgerTransactionKind,
     since: Date,
   ): Promise<bigint>;
+
+  /**
+   * The number of distinct transactions of `kind` posted to `accountKey` since `since`
+   * (inclusive) — backs the activity summary's ledger-derived bet count (T-811,
+   * RESPONSIBLE_GAMBLING.md §4), which must never come from a cached counter either.
+   */
+  countTransactionsSince(
+    tx: Tx,
+    accountKey: string,
+    currency: string,
+    kind: LedgerTransactionKind,
+    since: Date,
+  ): Promise<number>;
 }

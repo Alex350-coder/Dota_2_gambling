@@ -32,6 +32,12 @@ export interface SessionRepository {
   findByTokenHash(tokenHash: string): Promise<SessionRecord | null>;
   findById(id: string): Promise<SessionRecord | null>;
   listActiveByUserId(userId: string, now: Date): Promise<readonly SessionRecord[]>;
+  /**
+   * Every session for a user created on or after `since`, revoked or not — the activity
+   * summary's "time on site" (T-811) must reflect historical sessions too, not just the
+   * currently-active ones `listActiveByUserId` returns.
+   */
+  listByUserIdSince(userId: string, since: Date): Promise<readonly SessionRecord[]>;
   touch(id: string, lastSeenAt: Date): Promise<void>;
   revoke(id: string, revokedAt: Date): Promise<void>;
   /** Records a fresh MFA re-verification on this session (T-412 step-up auth). */

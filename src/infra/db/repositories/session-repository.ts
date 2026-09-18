@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, ne } from "drizzle-orm";
+import { and, eq, gt, gte, isNull, ne } from "drizzle-orm";
 import type { CreateSessionInput, SessionRecord, SessionRepository } from "@/domain/ports";
 import { sessions } from "../schema/identity";
 import type { DbTx } from "../uow";
@@ -44,6 +44,14 @@ export class DrizzleSessionRepository implements SessionRepository {
       .where(
         and(eq(sessions.userId, userId), isNull(sessions.revokedAt), gt(sessions.expiresAt, now)),
       );
+    return rows.map(toSessionRecord);
+  }
+
+  async listByUserIdSince(userId: string, since: Date): Promise<readonly SessionRecord[]> {
+    const rows = await this.tx
+      .select()
+      .from(sessions)
+      .where(and(eq(sessions.userId, userId), gte(sessions.createdAt, since)));
     return rows.map(toSessionRecord);
   }
 
