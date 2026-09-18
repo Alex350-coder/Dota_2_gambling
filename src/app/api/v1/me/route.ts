@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { DomainError } from "@/domain/errors";
 import { getContainer } from "@/platform/http/container";
 import { runRoute } from "@/platform/http/route";
+import { parseJsonBody } from "@/platform/http/body";
 import { sessionTokenFromRequest } from "@/platform/http/request-context";
 import { authorizeSelf } from "@/platform/http/self-authorize";
+import { updateProfileSchema } from "../schemas";
 
 export async function GET(request: Request): Promise<Response> {
   return runRoute({
@@ -18,6 +20,33 @@ export async function GET(request: Request): Promise<Response> {
       if (!user) {
         throw new DomainError("UNAUTHENTICATED", "session does not resolve to a known user");
       }
+
+      return NextResponse.json(
+        {
+          id: user.id,
+          email: user.email,
+          status: user.status,
+          emailVerifiedAt: user.emailVerifiedAt,
+          mfaEnabled: user.mfaEnabledAt !== null,
+          createdAt: user.createdAt,
+        },
+        { status: 200 },
+      );
+    },
+  });
+}
+
+export async function PATCH(request: Request): Promise<Response> {
+  return runRoute({
+    request,
+    rateLimitClass: "default",
+    handler: async () => {
+      const body = await parseJsonBody(request, updateProfileSchema);
+      const container = getContainer();
+      const token = sessionTokenFromRequest(request, container.config);
+      const { userId } = await authorizeSelf(container, token, "user:update");
+
+      const user = await container.updateProfile.execute({ userId, email: body.email });
 
       return NextResponse.json(
         {

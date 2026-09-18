@@ -95,6 +95,16 @@ export function mfaRecoveryCodeRedeemedEvent(userId: string): AuditEventInput {
   };
 }
 
+export function profileEmailChangeRequestedEvent(userId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId: userId,
+    action: "PROFILE_EMAIL_CHANGE_REQUESTED",
+    entityType: "user",
+    entityId: userId,
+  };
+}
+
 /**
  * Catalog event builders (T-401, T-402). Every catalog admin mutation writes
  * exactly one `audit_events` row through the same shape (T-414).

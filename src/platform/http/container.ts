@@ -41,19 +41,7 @@ import {
 import { ManualAdminResultProvider } from "@/infra/results";
 import { loadConfig, type Config } from "@/platform/config";
 import { SessionService } from "@/platform/session";
-import {
-  RegisterUseCase,
-  VerifyEmailUseCase,
-  LoginUseCase,
-  ListSessionsUseCase,
-  RevokeSessionUseCase,
-  ForgotPasswordUseCase,
-  ResetPasswordUseCase,
-  DisableMfaUseCase,
-  EnrollMfaUseCase,
-  RedeemMfaRecoveryCodeUseCase,
-  VerifyMfaUseCase,
-} from "@/application/identity";
+import { buildIdentityUseCases, type IdentityUseCases } from "./container-identity";
 import {
   ListGamesUseCase,
   GetGameUseCase,
@@ -96,7 +84,8 @@ export interface Container
     SettlementUseCases<DbTx>,
     WalletUseCases<DbTx>,
     BettingUseCases<DbTx>,
-    ComplianceUseCases<DbTx> {
+    ComplianceUseCases<DbTx>,
+    IdentityUseCases<DbTx> {
   readonly config: Config;
   readonly clock: Clock;
   readonly uow: DrizzleUnitOfWork;
@@ -106,17 +95,6 @@ export interface Container
   readonly sessionService: SessionService<DbTx>;
   readonly rateLimiter: RateLimiter;
   readonly audit: DrizzleAuditWriter;
-  readonly register: RegisterUseCase<DbTx>;
-  readonly verifyEmail: VerifyEmailUseCase<DbTx>;
-  readonly login: LoginUseCase<DbTx>;
-  readonly listSessions: ListSessionsUseCase<DbTx>;
-  readonly revokeSession: RevokeSessionUseCase<DbTx>;
-  readonly forgotPassword: ForgotPasswordUseCase<DbTx>;
-  readonly resetPassword: ResetPasswordUseCase<DbTx>;
-  readonly enrollMfa: EnrollMfaUseCase<DbTx>;
-  readonly verifyMfa: VerifyMfaUseCase<DbTx>;
-  readonly disableMfa: DisableMfaUseCase<DbTx>;
-  readonly redeemMfaRecoveryCode: RedeemMfaRecoveryCodeUseCase<DbTx>;
   readonly games: (tx: DbTx) => DrizzleGameRepository;
   readonly tournaments: (tx: DbTx) => DrizzleTournamentRepository;
   readonly teams: (tx: DbTx) => DrizzleTeamRepository;
@@ -260,19 +238,6 @@ export function getContainer(): Container {
     ledger,
   });
 
-  const mfaDeps = {
-    uow,
-    users,
-    recoveryCodes,
-    sessions,
-    mfa,
-    passwordHasher,
-    ids,
-    clock,
-    encryptionKey: config.ENCRYPTION_KEY,
-    audit,
-  };
-
   cached = {
     config,
     clock,
@@ -283,34 +248,22 @@ export function getContainer(): Container {
     sessionService,
     rateLimiter: new RateLimiter(clock, ids),
     audit,
-    register: new RegisterUseCase<DbTx>({
+    ...buildIdentityUseCases({
       uow,
       users,
       verificationTokens,
+      resetTokens,
+      loginAttempts,
+      recoveryCodes,
+      sessions,
       passwordHasher,
       mail,
+      mfa,
       ids,
       clock,
       audit,
+      encryptionKey: config.ENCRYPTION_KEY,
     }),
-    verifyEmail: new VerifyEmailUseCase<DbTx>({ uow, users, verificationTokens, clock, audit }),
-    login: new LoginUseCase<DbTx>({ uow, users, loginAttempts, passwordHasher, clock, audit }),
-    listSessions: new ListSessionsUseCase<DbTx>({ uow, sessions, clock }),
-    revokeSession: new RevokeSessionUseCase<DbTx>({ uow, sessions, clock, audit }),
-    forgotPassword: new ForgotPasswordUseCase<DbTx>({ uow, users, resetTokens, mail, ids, clock }),
-    resetPassword: new ResetPasswordUseCase<DbTx>({
-      uow,
-      users,
-      resetTokens,
-      sessions,
-      passwordHasher,
-      clock,
-      audit,
-    }),
-    enrollMfa: new EnrollMfaUseCase<DbTx>(mfaDeps),
-    verifyMfa: new VerifyMfaUseCase<DbTx>(mfaDeps),
-    disableMfa: new DisableMfaUseCase<DbTx>(mfaDeps),
-    redeemMfaRecoveryCode: new RedeemMfaRecoveryCodeUseCase<DbTx>(mfaDeps),
     games,
     tournaments,
     teams,

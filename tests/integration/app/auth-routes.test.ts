@@ -28,7 +28,7 @@ const { POST: logoutRoute } = await import("@/app/api/v1/auth/logout/route");
 const { POST: mfaEnrollRoute } = await import("@/app/api/v1/auth/mfa/enroll/route");
 const { POST: mfaVerifyRoute } = await import("@/app/api/v1/auth/mfa/verify/route");
 const { POST: mfaDisableRoute } = await import("@/app/api/v1/auth/mfa/disable/route");
-const { GET: meRoute } = await import("@/app/api/v1/me/route");
+const { GET: meRoute, PATCH: updateMeRoute } = await import("@/app/api/v1/me/route");
 const { GET: sessionsRoute } = await import("@/app/api/v1/me/sessions/route");
 const { DELETE: sessionByIdRoute } = await import("@/app/api/v1/me/sessions/[id]/route");
 
@@ -38,7 +38,7 @@ const PASSWORD = "a-strong-passphrase-42";
 function jsonRequest(
   path: string,
   body: unknown,
-  options: { cookie?: string; ip?: string } = {},
+  options: { cookie?: string; ip?: string; method?: string } = {},
 ): Request {
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (options.cookie) {
@@ -48,7 +48,7 @@ function jsonRequest(
     headers["x-forwarded-for"] = options.ip;
   }
   return new Request(`${APP_URL}${path}`, {
-    method: "POST",
+    method: options.method ?? "POST",
     headers,
     body: JSON.stringify(body),
   });
@@ -166,6 +166,37 @@ describe("auth API routes (T-316)", () => {
     expect(sessionsResponse.status).toBe(200);
     const { sessions } = (await sessionsResponse.json()) as { sessions: { id: string }[] };
     expect(sessions).toHaveLength(1);
+  });
+
+  it("PATCH /me changes the email and requires re-verification (T-801)", async () => {
+    const { cookie } = await registerAndVerify("203.0.113.11");
+    const newEmail = `route-updated-${randomUUID()}@example.test`;
+
+    const patchResponse = await updateMeRoute(
+      jsonRequest("/api/v1/me", { email: newEmail }, { cookie, method: "PATCH" }),
+    );
+    expect(patchResponse.status).toBe(200);
+    const updated = (await patchResponse.json()) as {
+      email: string;
+      emailVerifiedAt: string | null;
+    };
+    expect(updated.email).toBe(newEmail);
+    expect(updated.emailVerifiedAt).toBeNull();
+
+    const meResponse = await meRoute(getRequest("/api/v1/me", { cookie }));
+    const me = (await meResponse.json()) as { email: string };
+    expect(me.email).toBe(newEmail);
+  });
+
+  it("PATCH /me without a session cookie is UNAUTHENTICATED", async () => {
+    const response = await updateMeRoute(
+      jsonRequest(
+        "/api/v1/me",
+        { email: `route-${randomUUID()}@example.test` },
+        { method: "PATCH" },
+      ),
+    );
+    expect(response.status).toBe(401);
   });
 
   it("returns every Security.md §8 header on both success and error responses", async () => {

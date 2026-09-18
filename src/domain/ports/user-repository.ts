@@ -32,6 +32,8 @@ export interface UserRepository {
   findById(id: string): Promise<UserRecord | null>;
   create(input: CreateUserInput): Promise<UserRecord>;
   activate(userId: string, verifiedAt: Date): Promise<void>;
+  /** Sets the new email and clears `emailVerifiedAt` — the caller must re-verify (T-801). */
+  updateEmail(userId: string, email: string, updatedAt: Date): Promise<void>;
   updatePasswordHash(userId: string, passwordHash: string, updatedAt: Date): Promise<void>;
   setMfaSecret(userId: string, mfaSecretEnc: string, updatedAt: Date): Promise<void>;
   activateMfa(userId: string, enabledAt: Date): Promise<void>;

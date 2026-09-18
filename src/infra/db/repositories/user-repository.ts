@@ -40,6 +40,13 @@ export class DrizzleUserRepository implements UserRepository {
       .where(eq(users.id, userId));
   }
 
+  async updateEmail(userId: string, email: string, updatedAt: Date): Promise<void> {
+    await this.tx
+      .update(users)
+      .set({ email, emailVerifiedAt: null, updatedAt })
+      .where(eq(users.id, userId));
+  }
+
   async updatePasswordHash(userId: string, passwordHash: string, updatedAt: Date): Promise<void> {
     await this.tx.update(users).set({ passwordHash, updatedAt }).where(eq(users.id, userId));
   }
