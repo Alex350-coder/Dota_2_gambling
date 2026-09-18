@@ -9,3 +9,5 @@ export const pageQuerySchema = z
   .strict();
 
 export const idParamSchema = z.object({ id: z.uuid() });
+
+export const updateProfileSchema = z.object({ email: z.email().max(254) }).strict();

@@ -7,6 +7,7 @@ export type Action =
   | "session:list"
   | "user:suspend"
   | "user:read"
+  | "user:update"
   | "mfa:manage"
   | "audit:read"
   | "catalog:manage"
@@ -37,6 +38,9 @@ const POLICY: Readonly<Record<Action, ActionRule>> = {
   "session:list": { roles: ["USER"], anyOwner: ["ADMIN"] },
   "user:suspend": { roles: [], anyOwner: ["ADMIN"] },
   "user:read": { roles: ["USER"], anyOwner: ["ADMIN"] },
+  // No anyOwner bypass: profile changes (email) are always the account holder's own act,
+  // same rationale as mfa:manage — ADMIN uses user:suspend/user:update-status flows instead.
+  "user:update": { roles: ["USER"], anyOwner: [] },
   // No anyOwner bypass: MFA enrollment/verify/disable is always self-service,
   // even for ADMIN (disable already requires re-proving the account password).
   "mfa:manage": { roles: ["USER"], anyOwner: [] },

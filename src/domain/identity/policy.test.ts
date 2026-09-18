@@ -48,6 +48,18 @@ describe("can", () => {
     expect(can({ roles: ["ADMIN"] }, "user:read", { ownerId: "u2" }, "admin1")).toBe(true);
   });
 
+  it("allows a USER to update their own profile", () => {
+    expect(can({ roles: ["USER"] }, "user:update", { ownerId: "u1" }, "u1")).toBe(true);
+  });
+
+  it("denies a USER updating another user's profile", () => {
+    expect(can({ roles: ["USER"] }, "user:update", { ownerId: "u2" }, "u1")).toBe(false);
+  });
+
+  it("denies even an ADMIN from updating another user's profile", () => {
+    expect(can({ roles: ["ADMIN"] }, "user:update", { ownerId: "u2" }, "admin1")).toBe(false);
+  });
+
   it("allows a USER to manage their own MFA settings", () => {
     expect(can({ roles: ["USER"] }, "mfa:manage", { ownerId: "u1" }, "u1")).toBe(true);
   });
