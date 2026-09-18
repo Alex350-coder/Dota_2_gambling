@@ -1,4 +1,4 @@
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, countDistinct, eq, gte, sql } from "drizzle-orm";
 import type { Clock, IdGenerator, LedgerPostInput, LedgerWriter } from "@/domain/ports";
 import {
   createLedgerTransaction,
@@ -107,6 +107,29 @@ export class LedgerService implements LedgerWriter<DbTx> {
       );
 
     return row?.total === null || row?.total === undefined ? 0n : BigInt(row.total);
+  }
+
+  async countTransactionsSince(
+    tx: DbTx,
+    accountKey: string,
+    currency: string,
+    kind: LedgerTransactionKind,
+    since: Date,
+  ): Promise<number> {
+    const [row] = await tx
+      .select({ count: countDistinct(ledgerEntries.transactionId) })
+      .from(ledgerEntries)
+      .innerJoin(ledgerTransactions, eq(ledgerEntries.transactionId, ledgerTransactions.id))
+      .where(
+        and(
+          eq(ledgerEntries.accountKey, accountKey),
+          eq(ledgerEntries.currency, currency),
+          eq(ledgerTransactions.kind, kind),
+          gte(ledgerEntries.createdAt, since),
+        ),
+      );
+
+    return row?.count ?? 0;
   }
 
   private async findByIdempotencyKey(

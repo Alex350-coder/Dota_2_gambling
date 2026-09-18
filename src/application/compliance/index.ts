@@ -14,3 +14,10 @@ export {
   type AdminUpdateUserStatusInput,
   type AdminUpdateUserStatusDeps,
 } from "./admin-update-user-status";
+export {
+  ActivitySummaryUseCase,
+  type ActivitySummary,
+  type ActivitySummaryInput,
+  type ActivitySummaryDeps,
+  type ActivitySummaryPeriod,
+} from "./activity-summary";

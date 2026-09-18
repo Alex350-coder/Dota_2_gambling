@@ -13,3 +13,4 @@ export {
 } from "./limits";
 export { periodStart, type RollingLimitPeriod } from "./period";
 export { assertAdminCanChangeStatus } from "./self-exclusion-guard";
+export { sumSessionMinutes, type SessionSpan } from "./activity-window";
