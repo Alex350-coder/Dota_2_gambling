@@ -1,6 +1,7 @@
 import type { DbTx } from "@/infra/db";
 import type {
   AuditWriter,
+  BetOrderRepository,
   Clock,
   IdGenerator,
   LedgerWriter,
@@ -9,7 +10,7 @@ import type {
   WalletRepository,
 } from "@/domain/ports";
 import type { Config } from "@/platform/config";
-import { SimulatedCreditUseCase } from "@/application/wallet";
+import { GetWalletUseCase, SimulatedCreditUseCase } from "@/application/wallet";
 
 /** Split out of `container.ts` purely to keep that file under the repo's `max-lines` cap —
  * same rationale as `container-settlement.ts`, not a new architectural layer. */
@@ -17,6 +18,7 @@ export interface WalletContainerDeps {
   readonly uow: UnitOfWork<DbTx>;
   readonly users: (tx: DbTx) => UserRepository;
   readonly wallets: (tx: DbTx, ownerId: string) => WalletRepository;
+  readonly betOrders: (tx: DbTx, ownerId: string) => BetOrderRepository;
   readonly ledger: LedgerWriter<DbTx>;
   readonly ids: IdGenerator;
   readonly clock: Clock;
@@ -26,10 +28,12 @@ export interface WalletContainerDeps {
 
 export interface WalletUseCases<Tx> {
   readonly simulatedCredit: SimulatedCreditUseCase<Tx>;
+  readonly getWallet: GetWalletUseCase<Tx>;
 }
 
 export function buildWalletUseCases({
   config,
+  betOrders,
   ...deps
 }: WalletContainerDeps): WalletUseCases<DbTx> {
   return {
@@ -38,5 +42,6 @@ export function buildWalletUseCases({
       simulatedModeEnabled: config.MONEY_MODE === "SIMULATED",
       dailyCapMinor: BigInt(config.SIMULATED_CREDIT_DAILY_CAP_MINOR),
     }),
+    getWallet: new GetWalletUseCase<DbTx>({ uow: deps.uow, wallets: deps.wallets, betOrders }),
   };
 }

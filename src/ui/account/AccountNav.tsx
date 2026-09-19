@@ -4,6 +4,7 @@ const ACCOUNT_LINKS: readonly { href: string; label: string }[] = [
   { href: "/account", label: "Profile" },
   { href: "/account/security", label: "Security" },
   { href: "/account/sessions", label: "Sessions" },
+  { href: "/account/wallet", label: "Wallet" },
 ];
 
 export function AccountNav() {
