@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { DomainError } from "@/domain/errors";
+import type { AllocationSettlementDetail } from "@/application/betting";
 import { getContainer } from "@/platform/http/container";
 import { runRoute } from "@/platform/http/route";
 import { sessionTokenFromRequest } from "@/platform/http/request-context";
@@ -9,6 +10,17 @@ import { serializeBetOrder } from "../serialize";
 
 interface RouteParams {
   readonly params: Promise<{ id: string }>;
+}
+
+/** Bigint minor-unit fields are always serialized via `.toString()` in JSON responses. */
+function serializeSettlementDetail(detail: AllocationSettlementDetail) {
+  return {
+    allocationId: detail.allocationId,
+    matchedMinor: detail.matchedMinor.toString(),
+    returnMinor: detail.returnMinor.toString(),
+    commissionMinor: detail.commissionMinor.toString(),
+    netMinor: detail.netMinor.toString(),
+  };
 }
 
 /** Allocation rows never expose the counterparty's user id, only the two order ids. */
@@ -57,6 +69,7 @@ export async function GET(request: Request, { params }: RouteParams): Promise<Re
         {
           order: serializeBetOrder(result.order),
           allocations: result.allocations.map(serializeAllocation),
+          settlement: result.settlement.map(serializeSettlementDetail),
         },
         { status: 200 },
       );

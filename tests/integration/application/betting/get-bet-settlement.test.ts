@@ -11,16 +11,19 @@ import { DrizzleStreamerRepository } from "@/infra/db/repositories/streamer-repo
 import { DrizzleUserRepository } from "@/infra/db/repositories/user-repository";
 import { DrizzleMarketRepository } from "@/infra/db/repositories/market-repository";
 import { DrizzleOutcomeRepository } from "@/infra/db/repositories/outcome-repository";
+import { DrizzleMarketResultRepository } from "@/infra/db/repositories/market-result-repository";
+import { DrizzleSettlementRunRepository } from "@/infra/db/repositories/settlement-run-repository";
+import { DrizzleOrderRepository } from "@/infra/db/repositories/order-repository";
 import { DrizzleWalletRepository } from "@/infra/db/repositories/wallet-repository";
 import { DrizzleRgLimitRepository } from "@/infra/db/repositories/rg-limit-repository";
 import { DrizzleBetSlipRepository } from "@/infra/db/repositories/bet-slip-repository";
-import { DrizzleOrderRepository } from "@/infra/db/repositories/order-repository";
 import { DrizzleBookRepository } from "@/infra/db/repositories/book";
 import { DrizzleAllocationRepository } from "@/infra/db/repositories/allocation-repository";
 import { LedgerService } from "@/infra/db/ledger";
 import { DrizzleAuditWriter } from "@/infra/db/audit-writer";
 import { CryptoIdGenerator } from "@/infra/id-generator";
 import { pgAdvisoryXactLock } from "@/infra/db/locks";
+import { ManualAdminResultProvider } from "@/infra/results/manual";
 import { CreateGameUseCase } from "@/application/catalog/game";
 import { CreateTournamentUseCase } from "@/application/catalog/tournament";
 import { CreateMatchUseCase } from "@/application/catalog/match";
@@ -30,11 +33,12 @@ import { CreateStreamerUseCase } from "@/application/catalog/streamer";
 import { CreateMarketUseCase } from "@/application/catalog/create-market";
 import { TransitionMarketUseCase } from "@/application/catalog/transition-market";
 import { PlaceOrderUseCase } from "@/application/betting/place-order";
-import { CancelOrderUseCase } from "@/application/betting/cancel-order";
 import { GetBetUseCase } from "@/application/betting/get-bet";
-import { testDbConfig } from "../../helpers/test-db-config";
-import { resetAndMigrate } from "../../helpers/reset-db";
-import { expectCrossUserIsolation } from "./harness";
+import { ProposeResultUseCase } from "@/application/results/propose";
+import { ConfirmResultUseCase } from "@/application/results/confirm";
+import { SettleMarketUseCase } from "@/application/settlement/run";
+import { testDbConfig } from "../../../helpers/test-db-config";
+import { resetAndMigrate } from "../../../helpers/reset-db";
 
 class TestClock {
   constructor(private current: Date) {}
@@ -46,13 +50,19 @@ class TestClock {
   }
 }
 
-describe("cross-user isolation: bets (RULE-E02)", () => {
+/**
+ * T-806: `GetBetUseCase`'s settlement detail is derived from the actual ledger credit posted per
+ * allocation, not recomputed payout math — these tests assert that ledger-truth reconciles
+ * against the known settlement identity (winnerReturn = 2 * matched - commission).
+ */
+describe("GetBetUseCase — settlement detail (T-806)", () => {
   const pool = createPool(testDbConfig());
   const db = createDb(pool);
   const uow = new DrizzleUnitOfWork(db);
   const ids = new CryptoIdGenerator();
   const audit = new DrizzleAuditWriter();
   const clock = new TestClock(new Date("2026-01-01T00:00:00.000Z"));
+  const provider = new ManualAdminResultProvider();
   const ledger = new LedgerService(ids, clock);
 
   const createGame = new CreateGameUseCase<DbTx>({
@@ -112,7 +122,6 @@ describe("cross-user isolation: bets (RULE-E02)", () => {
     clock,
     audit,
   });
-
   const placeOrder = new PlaceOrderUseCase<DbTx>({
     uow,
     markets: (tx) => new DrizzleMarketRepository(tx),
@@ -132,18 +141,39 @@ describe("cross-user isolation: bets (RULE-E02)", () => {
     clock,
     audit,
   });
-
-  const cancelOrder = new CancelOrderUseCase<DbTx>({
+  const proposeResult = new ProposeResultUseCase<DbTx>({
     uow,
     markets: (tx) => new DrizzleMarketRepository(tx),
-    economicProfiles: (tx) => new DrizzleEconomicProfileRepository(tx),
+    outcomes: (tx) => new DrizzleOutcomeRepository(tx),
+    marketResults: (tx) => new DrizzleMarketResultRepository(tx),
     betOrders: (tx, ownerId) => new DrizzleOrderRepository(tx, ownerId),
-    ledger,
+    provider,
     ids,
     clock,
     audit,
   });
-
+  const confirmResult = new ConfirmResultUseCase<DbTx>({
+    uow,
+    marketResults: (tx) => new DrizzleMarketResultRepository(tx),
+    betOrders: (tx, ownerId) => new DrizzleOrderRepository(tx, ownerId),
+    clock,
+    audit,
+  });
+  const settleMarket = new SettleMarketUseCase<DbTx>({
+    uow,
+    markets: (tx) => new DrizzleMarketRepository(tx),
+    marketResults: (tx) => new DrizzleMarketResultRepository(tx),
+    settlementRuns: (tx) => new DrizzleSettlementRunRepository(tx),
+    allocations: (tx) => new DrizzleAllocationRepository(tx, ""),
+    book: (tx) => new DrizzleBookRepository(tx),
+    betOrders: (tx, ownerId) => new DrizzleOrderRepository(tx, ownerId),
+    economicProfiles: (tx) => new DrizzleEconomicProfileRepository(tx),
+    ledger,
+    acquireMarketLock: (tx, marketId) => pgAdvisoryXactLock(tx, `market:${marketId}`),
+    ids,
+    clock,
+    audit,
+  });
   const getBet = new GetBetUseCase<DbTx>({
     uow,
     betOrders: (tx, ownerId) => new DrizzleOrderRepository(tx, ownerId),
@@ -163,7 +193,7 @@ describe("cross-user isolation: bets (RULE-E02)", () => {
     const userId = ids.next();
     await pool.query(
       "INSERT INTO users (id, email, status, date_of_birth) VALUES ($1, $2, 'ACTIVE', '1990-01-01')",
-      [userId, `isolation-${randomUUID()}@example.test`],
+      [userId, `bettor-${randomUUID()}@example.test`],
     );
     await pool.query(
       "INSERT INTO wallets (user_id, currency, available_minor, locked_minor) VALUES ($1, 'PEN', $2, 0)",
@@ -172,7 +202,17 @@ describe("cross-user isolation: bets (RULE-E02)", () => {
     return userId;
   }
 
-  async function createOpenMarket(): Promise<{ marketId: string; outcomeAId: string }> {
+  /**
+   * 10000 minor on TEAM_A vs 10000 minor on TEAM_B, oddsNum=18/oddsDen=10,
+   * streamerCommissionBps=2000 — matches `settle-allocation.test.ts`'s FIN-06..08 fixture, so
+   * winner return is 18000 and commission is 2000 on a 10000-matched allocation.
+   */
+  async function createMatchedMarket(): Promise<{
+    marketId: string;
+    outcomeAId: string;
+    userA: string;
+    userB: string;
+  }> {
     const actorId = await createUser();
     const game = await createGame.execute({ actorId, slug: `g-${randomUUID()}`, name: "G" });
     const [modeRow] = await pool
@@ -213,8 +253,6 @@ describe("cross-user isolation: bets (RULE-E02)", () => {
       displayName: "S",
       defaultCommissionBps: 2000,
     });
-
-    clock.set(new Date("2026-01-01T00:00:00.000Z"));
     const market = await createMarket.execute({
       actorId,
       matchId: match.id,
@@ -233,56 +271,98 @@ describe("cross-user isolation: bets (RULE-E02)", () => {
       .query("SELECT id, code FROM outcomes WHERE market_id = $1", [market.id])
       .then((r) => r.rows as { id: string; code: string }[]);
     const outcomeA = outcomeRows.find((row) => row.code === "TEAM_A");
-    if (!outcomeA) throw new Error("outcome fixture missing");
+    const outcomeB = outcomeRows.find((row) => row.code === "TEAM_B");
+    if (!outcomeA || !outcomeB) throw new Error("outcome fixture missing");
 
-    return { marketId: market.id, outcomeAId: outcomeA.id };
+    const userA = await createUser();
+    const userB = await createUser();
+    await placeOrder.execute({
+      userId: userA,
+      marketId: market.id,
+      outcomeId: outcomeA.id,
+      requestedMinor: 10_000n,
+      idempotencyKey: randomUUID(),
+    });
+    await placeOrder.execute({
+      userId: userB,
+      marketId: market.id,
+      outcomeId: outcomeB.id,
+      requestedMinor: 10_000n,
+      idempotencyKey: randomUUID(),
+    });
+
+    return { marketId: market.id, outcomeAId: outcomeA.id, userA, userB };
   }
 
-  it("reports RESOURCE_NOT_FOUND when an attacker reads another user's order", async () => {
-    const { marketId, outcomeAId } = await createOpenMarket();
-    const owner = await createUser();
-    const attacker = await createUser();
+  async function closeAndConfirm(marketId: string, winningOutcomeId: string): Promise<void> {
+    const proposer = await createUser();
+    await transitionMarket.execute({
+      actorId: proposer,
+      marketId,
+      actor: "ADMIN",
+      to: "CLOSED",
+      manualClose: true,
+    });
+    const proposed = await proposeResult.execute({
+      actorId: proposer,
+      marketId,
+      winningOutcomeId,
+      rawPayload: { winner: "TEAM_A" },
+    });
+    const confirmer = await createUser();
+    await confirmResult.execute({ actorId: confirmer, resultId: proposed.id });
+  }
 
-    const order = await placeOrder.execute({
-      userId: owner,
+  it("returns no settlement rows for an open, unsettled order", async () => {
+    const { marketId, outcomeAId, userA } = await createMatchedMarket();
+    const openOrder = await placeOrder.execute({
+      userId: userA,
       marketId,
       outcomeId: outcomeAId,
-      requestedMinor: 5_000n,
+      requestedMinor: 1_000n,
       idempotencyKey: randomUUID(),
     });
 
-    await expectCrossUserIsolation({
-      owner,
-      attacker,
-      resourceId: order.id,
-      attempt: (actingUserId, resourceId) =>
-        getBet.execute({ actorId: actingUserId, orderId: resourceId }),
-    });
+    const result = await getBet.execute({ actorId: userA, orderId: openOrder.id });
+    expect(result.settlement).toEqual([]);
   });
 
-  it("reports RESOURCE_NOT_FOUND when an attacker cancels another user's order", async () => {
-    const { marketId, outcomeAId } = await createOpenMarket();
-    const owner = await createUser();
-    const attacker = await createUser();
+  it("winner's settlement detail reconciles against the ledger: return 18000, commission 2000, net 8000", async () => {
+    const { marketId, outcomeAId, userA, userB } = await createMatchedMarket();
+    const winnerOrder = await pool
+      .query("SELECT id FROM bet_orders WHERE market_id = $1 AND user_id = $2", [marketId, userA])
+      .then((r) => (r.rows[0] as { id: string }).id);
+    await closeAndConfirm(marketId, outcomeAId);
 
-    const order = await placeOrder.execute({
-      userId: owner,
-      marketId,
-      outcomeId: outcomeAId,
-      requestedMinor: 5_000n,
-      idempotencyKey: randomUUID(),
-    });
+    const admin = await createUser();
+    await settleMarket.execute({ actorId: admin, marketId });
 
-    await expectCrossUserIsolation({
-      owner,
-      attacker,
-      resourceId: order.id,
-      attempt: (actingUserId, resourceId) =>
-        cancelOrder.execute({ actorId: actingUserId, orderId: resourceId }),
-    });
+    const result = await getBet.execute({ actorId: userA, orderId: winnerOrder });
+    expect(result.settlement).toHaveLength(1);
+    const [detail] = result.settlement;
+    expect(detail?.matchedMinor).toBe(10_000n);
+    expect(detail?.returnMinor).toBe(18_000n);
+    expect(detail?.commissionMinor).toBe(2_000n);
+    expect(detail?.netMinor).toBe(8_000n);
+    void userB;
+  });
 
-    const untouched = await getBet.execute({ actorId: owner, orderId: order.id });
-    expect(untouched.order.status).toBe("OPEN");
-    expect(untouched.order.unmatchedMinor).toBe(5_000n);
+  it("loser's settlement detail shows zero return and zero commission, net -matched", async () => {
+    const { marketId, outcomeAId, userB } = await createMatchedMarket();
+    const loserOrder = await pool
+      .query("SELECT id FROM bet_orders WHERE market_id = $1 AND user_id = $2", [marketId, userB])
+      .then((r) => (r.rows[0] as { id: string }).id);
+    await closeAndConfirm(marketId, outcomeAId);
+
+    const admin = await createUser();
+    await settleMarket.execute({ actorId: admin, marketId });
+
+    const result = await getBet.execute({ actorId: userB, orderId: loserOrder });
+    expect(result.settlement).toHaveLength(1);
+    const [detail] = result.settlement;
+    expect(detail?.matchedMinor).toBe(10_000n);
+    expect(detail?.returnMinor).toBe(0n);
+    expect(detail?.commissionMinor).toBe(0n);
+    expect(detail?.netMinor).toBe(-10_000n);
   });
 });

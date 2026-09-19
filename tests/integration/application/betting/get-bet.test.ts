@@ -135,6 +135,7 @@ describe("GetBetUseCase (T-513)", () => {
     uow,
     betOrders: (tx, ownerId) => new DrizzleOrderRepository(tx, ownerId),
     allocations: (tx, ownerId) => new DrizzleAllocationRepository(tx, ownerId),
+    ledger,
   });
 
   beforeAll(async () => {
