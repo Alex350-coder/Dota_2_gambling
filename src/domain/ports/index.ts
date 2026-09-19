@@ -30,7 +30,14 @@ export type {
   CreateBetOrderInput,
   ListOwnedBetOrdersFilter,
 } from "./bet-order-repository";
-export type { LedgerWriter, LedgerPostInput, LedgerPostEntry } from "./ledger-writer";
+export type {
+  LedgerWriter,
+  LedgerPostInput,
+  LedgerPostEntry,
+  LedgerEntryRecord,
+  ListEntriesForAccountInput,
+  ListEntriesForAccountResult,
+} from "./ledger-writer";
 export type { WalletRepository, Wallet } from "./wallet-repository";
 export type {
   AllocationRepository,

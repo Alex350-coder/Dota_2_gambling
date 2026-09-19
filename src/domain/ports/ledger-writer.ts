@@ -5,6 +5,27 @@ import type {
   LedgerTransactionKind,
 } from "../ledger";
 
+/** One posted entry as read back for a transaction-history listing, newest first. */
+export interface LedgerEntryRecord {
+  readonly id: string;
+  readonly transactionId: string;
+  readonly kind: LedgerTransactionKind;
+  readonly accountKey: string;
+  readonly currency: string;
+  readonly signedAmountMinor: bigint;
+  readonly createdAt: Date;
+}
+
+export interface ListEntriesForAccountInput {
+  readonly page: number;
+  readonly limit: number;
+}
+
+export interface ListEntriesForAccountResult {
+  readonly entries: readonly LedgerEntryRecord[];
+  readonly total: number;
+}
+
 /** A ledger entry as posted by a caller — the writer assigns `id`/`createdAt`. */
 export interface LedgerPostEntry {
   readonly accountKey: string;
@@ -68,4 +89,17 @@ export interface LedgerWriter<Tx = unknown> {
     kind: LedgerTransactionKind,
     since: Date,
   ): Promise<number>;
+
+  /**
+   * A page of `accountKey`'s posted entries, newest first, with a DB-level `LIMIT`/`OFFSET`
+   * (RULE-G04) — backs the account transaction-history view (T-805). Unlike `balanceOf` this
+   * returns rows rather than an aggregate, but stays on this port for the same reason:
+   * `LedgerService` already owns all `ledger_entries` reads/writes.
+   */
+  listEntriesForAccount(
+    tx: Tx,
+    accountKey: string,
+    currency: string,
+    input: ListEntriesForAccountInput,
+  ): Promise<ListEntriesForAccountResult>;
 }

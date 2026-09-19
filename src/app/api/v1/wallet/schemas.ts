@@ -14,3 +14,13 @@ export const getWalletQuerySchema = z
     currency: z.string().length(3).optional(),
   })
   .strict();
+
+/** GET /wallet/transactions query — page/limit pagination (RULE-G04), matching the same
+ * convention `GET /bets` already uses (`listBetsQuerySchema`). */
+export const listTransactionsQuerySchema = z
+  .object({
+    currency: z.string().length(3).optional(),
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).optional(),
+  })
+  .strict();

@@ -11,3 +11,8 @@ export {
   type GetWalletDeps,
   type WalletMarketBreakdown,
 } from "./get-wallet";
+export {
+  ListTransactionsUseCase,
+  type ListTransactionsInput,
+  type ListTransactionsDeps,
+} from "./list-transactions";
