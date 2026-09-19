@@ -7,6 +7,7 @@ const ACCOUNT_LINKS: readonly { href: string; label: string }[] = [
   { href: "/account/wallet", label: "Wallet" },
   { href: "/account/transactions", label: "Transactions" },
   { href: "/account/bets", label: "Bets" },
+  { href: "/account/responsible-gambling", label: "Responsible gambling" },
 ];
 
 export function AccountNav() {

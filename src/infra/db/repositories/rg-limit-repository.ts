@@ -17,12 +17,50 @@ export class DrizzleRgLimitRepository implements RgLimitRepository {
       .from(rgLimits)
       .where(and(eq(rgLimits.userId, this.ownerId), eq(rgLimits.kind, kind)));
 
-    return rows.map((row) => ({
-      kind: row.kind,
-      period: row.period,
-      currentValue: row.currentValue,
-      pendingValue: row.pendingValue,
-      effectiveAt: row.effectiveAt,
-    }));
+    return rows.map(toState);
   }
+
+  async listAll(): Promise<RgLimitState[]> {
+    const rows = await this.tx.select().from(rgLimits).where(eq(rgLimits.userId, this.ownerId));
+
+    return rows.map(toState);
+  }
+
+  async upsert(state: RgLimitState): Promise<void> {
+    await this.tx
+      .insert(rgLimits)
+      .values({
+        userId: this.ownerId,
+        kind: state.kind,
+        period: state.period,
+        currentValue: state.currentValue,
+        pendingValue: state.pendingValue,
+        effectiveAt: state.effectiveAt,
+      })
+      .onConflictDoUpdate({
+        target: [rgLimits.userId, rgLimits.kind, rgLimits.period],
+        set: {
+          currentValue: state.currentValue,
+          pendingValue: state.pendingValue,
+          effectiveAt: state.effectiveAt,
+          updatedAt: new Date(),
+        },
+      });
+  }
+}
+
+function toState(row: {
+  kind: LimitKind;
+  period: RgLimitState["period"];
+  currentValue: bigint;
+  pendingValue: bigint | null;
+  effectiveAt: Date | null;
+}): RgLimitState {
+  return {
+    kind: row.kind,
+    period: row.period,
+    currentValue: row.currentValue,
+    pendingValue: row.pendingValue,
+    effectiveAt: row.effectiveAt,
+  };
 }
