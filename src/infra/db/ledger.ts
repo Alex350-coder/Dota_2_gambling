@@ -9,6 +9,7 @@ import type {
 } from "@/domain/ports";
 import {
   createLedgerTransaction,
+  type LedgerReferenceType,
   type LedgerTransaction,
   type LedgerTransactionKind,
 } from "@/domain/ledger";
@@ -171,6 +172,28 @@ export class LedgerService implements LedgerWriter<DbTx> {
     ]);
 
     return { entries: rows, total: totalRow?.total ?? 0 };
+  }
+
+  async listEntriesForReference(tx: DbTx, referenceType: LedgerReferenceType, referenceId: string) {
+    return tx
+      .select({
+        id: ledgerEntries.id,
+        transactionId: ledgerEntries.transactionId,
+        kind: ledgerTransactions.kind,
+        accountKey: ledgerEntries.accountKey,
+        currency: ledgerEntries.currency,
+        signedAmountMinor: ledgerEntries.signedAmountMinor,
+        createdAt: ledgerEntries.createdAt,
+      })
+      .from(ledgerEntries)
+      .innerJoin(ledgerTransactions, eq(ledgerEntries.transactionId, ledgerTransactions.id))
+      .where(
+        and(
+          eq(ledgerTransactions.referenceType, referenceType),
+          eq(ledgerTransactions.referenceId, referenceId),
+        ),
+      )
+      .orderBy(desc(ledgerEntries.createdAt), desc(ledgerEntries.id));
   }
 
   private async findByIdempotencyKey(

@@ -102,4 +102,17 @@ export interface LedgerWriter<Tx = unknown> {
     currency: string,
     input: ListEntriesForAccountInput,
   ): Promise<ListEntriesForAccountResult>;
+
+  /**
+   * Every entry (across every account) posted under one `(referenceType, referenceId)` — a
+   * ledger transaction has only a handful of entries, so this is never paginated. Backs the
+   * per-bet settlement detail view (T-806): reading the actual credited `USER_AVAILABLE`
+   * amount for one allocation off the ledger, rather than recomputing payout/commission math
+   * a second time outside `settle-allocation.ts`.
+   */
+  listEntriesForReference(
+    tx: Tx,
+    referenceType: LedgerReferenceType,
+    referenceId: string,
+  ): Promise<readonly LedgerEntryRecord[]>;
 }

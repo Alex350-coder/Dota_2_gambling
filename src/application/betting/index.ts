@@ -4,3 +4,4 @@ export { releaseUnmatchedOnClose } from "./release-unmatched";
 export type { ReleaseUnmatchedDeps } from "./release-unmatched";
 export { ListBetsUseCase } from "./list-bets";
 export { GetBetUseCase } from "./get-bet";
+export type { AllocationSettlementDetail } from "./get-bet";
