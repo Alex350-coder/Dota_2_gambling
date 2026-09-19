@@ -8,6 +8,7 @@ import { SystemClock } from "@/infra/clock";
 import { SessionService } from "@/platform/session/service";
 import { ListSessionsUseCase } from "@/application/identity/list-sessions";
 import { RevokeSessionUseCase } from "@/application/identity/revoke-session";
+import { RevokeAllSessionsUseCase } from "@/application/identity/revoke-all-sessions";
 import { DrizzleAuditWriter } from "@/infra/db/audit-writer";
 import { DomainError } from "@/domain/errors";
 import { testDbConfig } from "../../../helpers/test-db-config";
@@ -36,6 +37,13 @@ describe("list-sessions + revoke-session", () => {
   });
 
   const revokeSession = new RevokeSessionUseCase<DbTx>({
+    uow,
+    sessions: (tx) => new DrizzleSessionRepository(tx),
+    clock,
+    audit,
+  });
+
+  const revokeAllSessions = new RevokeAllSessionsUseCase<DbTx>({
     uow,
     sessions: (tx) => new DrizzleSessionRepository(tx),
     clock,
@@ -140,6 +148,69 @@ describe("list-sessions + revoke-session", () => {
       .query(
         "SELECT action FROM audit_events WHERE entity_id = $1 AND action = 'SESSION_REVOKED'",
         [session.id],
+      )
+      .then((r) => r.rows);
+    expect(rows).toHaveLength(1);
+  });
+
+  it("revokes every other session but keeps the caller's own alive", async () => {
+    const userId = await createUser();
+    const { token: keptToken, session: keptSession } = await sessionService.createSession({
+      userId,
+      ip: null,
+      userAgent: null,
+    });
+    const { token: otherTokenA } = await sessionService.createSession({
+      userId,
+      ip: null,
+      userAgent: null,
+    });
+    const { token: otherTokenB } = await sessionService.createSession({
+      userId,
+      ip: null,
+      userAgent: null,
+    });
+
+    await revokeAllSessions.execute({ userId, exceptSessionId: keptSession.id });
+
+    await expect(sessionService.validateSession(keptToken)).resolves.toBeDefined();
+    await expect(sessionService.validateSession(otherTokenA)).rejects.toMatchObject({
+      code: "SESSION_EXPIRED",
+    });
+    await expect(sessionService.validateSession(otherTokenB)).rejects.toMatchObject({
+      code: "SESSION_EXPIRED",
+    });
+  });
+
+  it("does not revoke another user's sessions", async () => {
+    const userId = await createUser();
+    const otherUserId = await createUser();
+    const { session: keptSession } = await sessionService.createSession({
+      userId,
+      ip: null,
+      userAgent: null,
+    });
+    const { token: otherUserToken } = await sessionService.createSession({
+      userId: otherUserId,
+      ip: null,
+      userAgent: null,
+    });
+
+    await revokeAllSessions.execute({ userId, exceptSessionId: keptSession.id });
+
+    await expect(sessionService.validateSession(otherUserToken)).resolves.toBeDefined();
+  });
+
+  it("emits exactly one ALL_OTHER_SESSIONS_REVOKED audit event", async () => {
+    const userId = await createUser();
+    const { session } = await sessionService.createSession({ userId, ip: null, userAgent: null });
+
+    await revokeAllSessions.execute({ userId, exceptSessionId: session.id });
+
+    const rows = await pool
+      .query(
+        "SELECT action FROM audit_events WHERE entity_id = $1 AND action = 'ALL_OTHER_SESSIONS_REVOKED'",
+        [userId],
       )
       .then((r) => r.rows);
     expect(rows).toHaveLength(1);

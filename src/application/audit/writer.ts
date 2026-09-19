@@ -45,6 +45,16 @@ export function sessionRevokedEvent(userId: string, sessionId: string): AuditEve
   };
 }
 
+export function allOtherSessionsRevokedEvent(userId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId: userId,
+    action: "ALL_OTHER_SESSIONS_REVOKED",
+    entityType: "user",
+    entityId: userId,
+  };
+}
+
 export function passwordResetEvent(userId: string): AuditEventInput {
   return {
     actorType: "user",
