@@ -3,6 +3,7 @@ import Link from "next/link";
 const ACCOUNT_LINKS: readonly { href: string; label: string }[] = [
   { href: "/account", label: "Profile" },
   { href: "/account/security", label: "Security" },
+  { href: "/account/sessions", label: "Sessions" },
 ];
 
 export function AccountNav() {

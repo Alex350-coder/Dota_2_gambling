@@ -8,6 +8,7 @@ import { SystemClock } from "@/infra/clock";
 import { SessionService } from "@/platform/session/service";
 import { ListSessionsUseCase } from "@/application/identity/list-sessions";
 import { RevokeSessionUseCase } from "@/application/identity/revoke-session";
+import { RevokeAllSessionsUseCase } from "@/application/identity/revoke-all-sessions";
 import { DrizzleAuditWriter } from "@/infra/db/audit-writer";
 import { testDbConfig } from "../../helpers/test-db-config";
 import { resetAndMigrate } from "../../helpers/reset-db";
@@ -36,6 +37,13 @@ describe("cross-user isolation: session revocation", () => {
   });
 
   const revokeSession = new RevokeSessionUseCase<DbTx>({
+    uow,
+    sessions: (tx) => new DrizzleSessionRepository(tx),
+    clock,
+    audit,
+  });
+
+  const revokeAllSessions = new RevokeAllSessionsUseCase<DbTx>({
     uow,
     sessions: (tx) => new DrizzleSessionRepository(tx),
     clock,
@@ -78,5 +86,26 @@ describe("cross-user isolation: session revocation", () => {
 
     const active = await listSessions.execute({ userId: owner });
     expect(active.find((s) => s.id === session.id)).toBeDefined();
+  });
+
+  it("revoke-all-sessions never touches another user's active sessions (T-803)", async () => {
+    const owner = await createUser();
+    const attacker = await createUser();
+    const { session: ownerSession } = await sessionService.createSession({
+      userId: owner,
+      ip: null,
+      userAgent: null,
+    });
+    const { token: attackerToken, session: attackerSession } = await sessionService.createSession({
+      userId: attacker,
+      ip: null,
+      userAgent: null,
+    });
+
+    await revokeAllSessions.execute({ userId: attacker, exceptSessionId: attackerSession.id });
+    await expect(sessionService.validateSession(attackerToken)).resolves.toBeDefined();
+
+    const ownerActive = await listSessions.execute({ userId: owner });
+    expect(ownerActive.find((s) => s.id === ownerSession.id)).toBeDefined();
   });
 });

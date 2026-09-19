@@ -32,6 +32,7 @@ const { GET: meRoute, PATCH: updateMeRoute } = await import("@/app/api/v1/me/rou
 const { POST: changePasswordRoute } = await import("@/app/api/v1/me/password/route");
 const { GET: sessionsRoute } = await import("@/app/api/v1/me/sessions/route");
 const { DELETE: sessionByIdRoute } = await import("@/app/api/v1/me/sessions/[id]/route");
+const { POST: revokeAllSessionsRoute } = await import("@/app/api/v1/me/sessions/revoke-all/route");
 
 const APP_URL = "https://app.example.test";
 const PASSWORD = "a-strong-passphrase-42";
@@ -251,6 +252,32 @@ describe("auth API routes (T-316)", () => {
         currentPassword: PASSWORD,
         newPassword: "a-brand-new-route-passphrase-3",
       }),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it("POST /me/sessions/revoke-all signs out every other session but keeps the caller's own (T-803)", async () => {
+    const { email, cookie } = await registerAndVerify("203.0.113.14");
+    const secondLogin = await loginRoute(
+      jsonRequest("/api/v1/auth/login", { email, password: PASSWORD }, { ip: "203.0.113.14" }),
+    );
+    const secondCookie = sessionCookieFrom(secondLogin);
+
+    const revokeAllResponse = await revokeAllSessionsRoute(
+      jsonRequest("/api/v1/me/sessions/revoke-all", {}, { cookie }),
+    );
+    expect(revokeAllResponse.status).toBe(200);
+
+    const staleMeResponse = await meRoute(getRequest("/api/v1/me", { cookie: secondCookie }));
+    expect(staleMeResponse.status).toBe(401);
+
+    const stillActiveMeResponse = await meRoute(getRequest("/api/v1/me", { cookie }));
+    expect(stillActiveMeResponse.status).toBe(200);
+  });
+
+  it("POST /me/sessions/revoke-all without a session cookie is UNAUTHENTICATED", async () => {
+    const response = await revokeAllSessionsRoute(
+      jsonRequest("/api/v1/me/sessions/revoke-all", {}),
     );
     expect(response.status).toBe(401);
   });

@@ -22,6 +22,7 @@ import {
   LoginUseCase,
   ListSessionsUseCase,
   RevokeSessionUseCase,
+  RevokeAllSessionsUseCase,
   ForgotPasswordUseCase,
   ResetPasswordUseCase,
   DisableMfaUseCase,
@@ -57,6 +58,7 @@ export interface IdentityUseCases<Tx> {
   readonly login: LoginUseCase<Tx>;
   readonly listSessions: ListSessionsUseCase<Tx>;
   readonly revokeSession: RevokeSessionUseCase<Tx>;
+  readonly revokeAllSessions: RevokeAllSessionsUseCase<Tx>;
   readonly forgotPassword: ForgotPasswordUseCase<Tx>;
   readonly resetPassword: ResetPasswordUseCase<Tx>;
   readonly enrollMfa: EnrollMfaUseCase<Tx>;
@@ -128,6 +130,7 @@ export function buildIdentityUseCases(deps: IdentityContainerDeps): IdentityUseC
     login: new LoginUseCase<DbTx>({ uow, users, loginAttempts, passwordHasher, clock, audit }),
     listSessions: new ListSessionsUseCase<DbTx>({ uow, sessions, clock }),
     revokeSession: new RevokeSessionUseCase<DbTx>({ uow, sessions, clock, audit }),
+    revokeAllSessions: new RevokeAllSessionsUseCase<DbTx>({ uow, sessions, clock, audit }),
     forgotPassword: new ForgotPasswordUseCase<DbTx>({ uow, users, resetTokens, mail, ids, clock }),
     resetPassword: new ResetPasswordUseCase<DbTx>({
       uow,

@@ -5,6 +5,7 @@ export { ChangePasswordUseCase } from "./change-password";
 export { LoginUseCase } from "./login";
 export { ListSessionsUseCase } from "./list-sessions";
 export { RevokeSessionUseCase } from "./revoke-session";
+export { RevokeAllSessionsUseCase } from "./revoke-all-sessions";
 export { ForgotPasswordUseCase } from "./forgot-password";
 export { ResetPasswordUseCase } from "./reset-password";
 export {
