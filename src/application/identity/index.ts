@@ -1,6 +1,7 @@
 export { RegisterUseCase } from "./register";
 export { VerifyEmailUseCase } from "./verify-email";
 export { UpdateProfileUseCase } from "./update-profile";
+export { ChangePasswordUseCase } from "./change-password";
 export { LoginUseCase } from "./login";
 export { ListSessionsUseCase } from "./list-sessions";
 export { RevokeSessionUseCase } from "./revoke-session";

@@ -18,6 +18,7 @@ import {
   RegisterUseCase,
   VerifyEmailUseCase,
   UpdateProfileUseCase,
+  ChangePasswordUseCase,
   LoginUseCase,
   ListSessionsUseCase,
   RevokeSessionUseCase,
@@ -52,6 +53,7 @@ export interface IdentityUseCases<Tx> {
   readonly register: RegisterUseCase<Tx>;
   readonly verifyEmail: VerifyEmailUseCase<Tx>;
   readonly updateProfile: UpdateProfileUseCase<Tx>;
+  readonly changePassword: ChangePasswordUseCase<Tx>;
   readonly login: LoginUseCase<Tx>;
   readonly listSessions: ListSessionsUseCase<Tx>;
   readonly revokeSession: RevokeSessionUseCase<Tx>;
@@ -112,6 +114,14 @@ export function buildIdentityUseCases(deps: IdentityContainerDeps): IdentityUseC
       verificationTokens,
       mail,
       ids,
+      clock,
+      audit,
+    }),
+    changePassword: new ChangePasswordUseCase<DbTx>({
+      uow,
+      users,
+      sessions,
+      passwordHasher,
       clock,
       audit,
     }),

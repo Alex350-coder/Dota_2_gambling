@@ -55,6 +55,16 @@ export function passwordResetEvent(userId: string): AuditEventInput {
   };
 }
 
+export function passwordChangedEvent(userId: string): AuditEventInput {
+  return {
+    actorType: "user",
+    actorId: userId,
+    action: "PASSWORD_CHANGED",
+    entityType: "user",
+    entityId: userId,
+  };
+}
+
 export function mfaEnrolledEvent(userId: string): AuditEventInput {
   return {
     actorType: "user",
