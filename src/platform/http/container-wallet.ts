@@ -10,7 +10,11 @@ import type {
   WalletRepository,
 } from "@/domain/ports";
 import type { Config } from "@/platform/config";
-import { GetWalletUseCase, SimulatedCreditUseCase } from "@/application/wallet";
+import {
+  GetWalletUseCase,
+  ListTransactionsUseCase,
+  SimulatedCreditUseCase,
+} from "@/application/wallet";
 
 /** Split out of `container.ts` purely to keep that file under the repo's `max-lines` cap —
  * same rationale as `container-settlement.ts`, not a new architectural layer. */
@@ -29,6 +33,7 @@ export interface WalletContainerDeps {
 export interface WalletUseCases<Tx> {
   readonly simulatedCredit: SimulatedCreditUseCase<Tx>;
   readonly getWallet: GetWalletUseCase<Tx>;
+  readonly listTransactions: ListTransactionsUseCase<Tx>;
 }
 
 export function buildWalletUseCases({
@@ -43,5 +48,6 @@ export function buildWalletUseCases({
       dailyCapMinor: BigInt(config.SIMULATED_CREDIT_DAILY_CAP_MINOR),
     }),
     getWallet: new GetWalletUseCase<DbTx>({ uow: deps.uow, wallets: deps.wallets, betOrders }),
+    listTransactions: new ListTransactionsUseCase<DbTx>({ uow: deps.uow, ledger: deps.ledger }),
   };
 }

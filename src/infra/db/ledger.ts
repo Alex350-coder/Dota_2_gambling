@@ -1,5 +1,12 @@
-import { and, countDistinct, eq, gte, sql } from "drizzle-orm";
-import type { Clock, IdGenerator, LedgerPostInput, LedgerWriter } from "@/domain/ports";
+import { and, count, desc, eq, countDistinct, gte, sql } from "drizzle-orm";
+import type {
+  Clock,
+  IdGenerator,
+  LedgerPostInput,
+  LedgerWriter,
+  ListEntriesForAccountInput,
+  ListEntriesForAccountResult,
+} from "@/domain/ports";
 import {
   createLedgerTransaction,
   type LedgerTransaction,
@@ -130,6 +137,40 @@ export class LedgerService implements LedgerWriter<DbTx> {
       );
 
     return row?.count ?? 0;
+  }
+
+  async listEntriesForAccount(
+    tx: DbTx,
+    accountKey: string,
+    currency: string,
+    input: ListEntriesForAccountInput,
+  ): Promise<ListEntriesForAccountResult> {
+    const offset = (input.page - 1) * input.limit;
+
+    const [rows, [totalRow]] = await Promise.all([
+      tx
+        .select({
+          id: ledgerEntries.id,
+          transactionId: ledgerEntries.transactionId,
+          kind: ledgerTransactions.kind,
+          accountKey: ledgerEntries.accountKey,
+          currency: ledgerEntries.currency,
+          signedAmountMinor: ledgerEntries.signedAmountMinor,
+          createdAt: ledgerEntries.createdAt,
+        })
+        .from(ledgerEntries)
+        .innerJoin(ledgerTransactions, eq(ledgerEntries.transactionId, ledgerTransactions.id))
+        .where(and(eq(ledgerEntries.accountKey, accountKey), eq(ledgerEntries.currency, currency)))
+        .orderBy(desc(ledgerEntries.createdAt), desc(ledgerEntries.id))
+        .limit(input.limit)
+        .offset(offset),
+      tx
+        .select({ total: count() })
+        .from(ledgerEntries)
+        .where(and(eq(ledgerEntries.accountKey, accountKey), eq(ledgerEntries.currency, currency))),
+    ]);
+
+    return { entries: rows, total: totalRow?.total ?? 0 };
   }
 
   private async findByIdempotencyKey(
