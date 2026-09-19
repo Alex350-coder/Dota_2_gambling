@@ -322,7 +322,7 @@ export function getContainer(): Container {
     }),
     transitionMarket,
     closeMarkets: new CloseMarketsUseCase<DbTx>({ uow, markets, transitionMarket, clock }),
-    ...buildWalletUseCases({ uow, users, wallets, ledger, ids, clock, audit, config }),
+    ...buildWalletUseCases({ uow, users, wallets, betOrders, ledger, ids, clock, audit, config }),
     ...buildBettingUseCases({
       uow,
       markets,
