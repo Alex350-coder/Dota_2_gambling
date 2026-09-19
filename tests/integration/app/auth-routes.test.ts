@@ -29,6 +29,7 @@ const { POST: mfaEnrollRoute } = await import("@/app/api/v1/auth/mfa/enroll/rout
 const { POST: mfaVerifyRoute } = await import("@/app/api/v1/auth/mfa/verify/route");
 const { POST: mfaDisableRoute } = await import("@/app/api/v1/auth/mfa/disable/route");
 const { GET: meRoute, PATCH: updateMeRoute } = await import("@/app/api/v1/me/route");
+const { POST: changePasswordRoute } = await import("@/app/api/v1/me/password/route");
 const { GET: sessionsRoute } = await import("@/app/api/v1/me/sessions/route");
 const { DELETE: sessionByIdRoute } = await import("@/app/api/v1/me/sessions/[id]/route");
 
@@ -195,6 +196,61 @@ describe("auth API routes (T-316)", () => {
         { email: `route-${randomUUID()}@example.test` },
         { method: "PATCH" },
       ),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it("POST /me/password changes the password and signs out other sessions (T-802)", async () => {
+    const { email, cookie } = await registerAndVerify("203.0.113.12");
+    const secondLogin = await loginRoute(
+      jsonRequest("/api/v1/auth/login", { email, password: PASSWORD }, { ip: "203.0.113.12" }),
+    );
+    const secondCookie = sessionCookieFrom(secondLogin);
+
+    const changeResponse = await changePasswordRoute(
+      jsonRequest(
+        "/api/v1/me/password",
+        { currentPassword: PASSWORD, newPassword: "a-brand-new-route-passphrase-1" },
+        { cookie },
+      ),
+    );
+    expect(changeResponse.status).toBe(200);
+
+    const staleMeResponse = await meRoute(getRequest("/api/v1/me", { cookie: secondCookie }));
+    expect(staleMeResponse.status).toBe(401);
+
+    const freshLogin = await loginRoute(
+      jsonRequest(
+        "/api/v1/auth/login",
+        { email, password: "a-brand-new-route-passphrase-1" },
+        { ip: "203.0.113.12" },
+      ),
+    );
+    expect(freshLogin.status).toBe(200);
+  });
+
+  it("POST /me/password with the wrong current password is UNAUTHENTICATED (T-802)", async () => {
+    const { cookie } = await registerAndVerify("203.0.113.13");
+
+    const response = await changePasswordRoute(
+      jsonRequest(
+        "/api/v1/me/password",
+        {
+          currentPassword: "not-the-right-password",
+          newPassword: "a-brand-new-route-passphrase-2",
+        },
+        { cookie },
+      ),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it("POST /me/password without a session cookie is UNAUTHENTICATED", async () => {
+    const response = await changePasswordRoute(
+      jsonRequest("/api/v1/me/password", {
+        currentPassword: PASSWORD,
+        newPassword: "a-brand-new-route-passphrase-3",
+      }),
     );
     expect(response.status).toBe(401);
   });

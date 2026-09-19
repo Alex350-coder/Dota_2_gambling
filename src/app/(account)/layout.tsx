@@ -4,6 +4,7 @@ import { getContainer } from "@/platform/http/container";
 import { DisclaimerBanner } from "@/ui/layout/DisclaimerBanner";
 import { NavBar } from "@/ui/layout/NavBar";
 import { Footer } from "@/ui/layout/Footer";
+import { AccountNav } from "@/ui/account/AccountNav";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,11 @@ export default async function AccountLayout({ children }: { children: React.Reac
       </a>
       {config.MONEY_MODE === "SIMULATED" && <DisclaimerBanner />}
       <NavBar />
-      <main id="main-content" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+      <main
+        id="main-content"
+        className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8"
+      >
+        <AccountNav />
         {children}
       </main>
       <Footer />

@@ -11,3 +11,10 @@ export const pageQuerySchema = z
 export const idParamSchema = z.object({ id: z.uuid() });
 
 export const updateProfileSchema = z.object({ email: z.email().max(254) }).strict();
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(128),
+    newPassword: z.string().min(12).max(128),
+  })
+  .strict();
