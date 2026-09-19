@@ -18,7 +18,8 @@ export type Action =
   | "result:manage"
   | "settlement:manage"
   | "wallet:credit"
-  | "wallet:read";
+  | "wallet:read"
+  | "compliance:manage";
 
 export interface Actor {
   readonly roles: readonly Role[];
@@ -70,6 +71,9 @@ const POLICY: Readonly<Record<Action, ActionRule>> = {
   // Reading one's own wallet is always self-service — no anyOwner bypass, same rationale
   // as wallet:credit; ADMIN support flows use a dedicated read path, not this action.
   "wallet:read": { roles: ["USER"], anyOwner: [] },
+  // Responsible-gambling limits/self-exclusion/activity-summary are always self-service —
+  // no anyOwner bypass, same rationale as wallet:credit and mfa:manage.
+  "compliance:manage": { roles: ["USER"], anyOwner: [] },
 };
 
 /**

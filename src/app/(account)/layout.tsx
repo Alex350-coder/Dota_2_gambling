@@ -5,8 +5,12 @@ import { DisclaimerBanner } from "@/ui/layout/DisclaimerBanner";
 import { NavBar } from "@/ui/layout/NavBar";
 import { Footer } from "@/ui/layout/Footer";
 import { AccountNav } from "@/ui/account/AccountNav";
+import { SessionTimeReminder } from "@/ui/compliance/SessionTimeReminder";
 
 export const dynamic = "force-dynamic";
+
+/** Soft reminder cadence (T-813) — independent of the hard `SESSION_TIME` RG limit. */
+const SESSION_REMINDER_INTERVAL_MINUTES = 60;
 
 /**
  * Every /account/** page needs a valid session — resolved once here via the same
@@ -25,8 +29,10 @@ export default async function AccountLayout({ children }: { children: React.Reac
     redirect("/");
   }
 
+  let sessionCreatedAt: Date;
   try {
-    await sessionService.validateSession(token);
+    const session = await sessionService.validateSession(token);
+    sessionCreatedAt = session.createdAt;
   } catch {
     redirect("/");
   }
@@ -46,6 +52,10 @@ export default async function AccountLayout({ children }: { children: React.Reac
         className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8"
       >
         <AccountNav />
+        <SessionTimeReminder
+          sessionStartedAt={sessionCreatedAt.toISOString()}
+          intervalMinutes={SESSION_REMINDER_INTERVAL_MINUTES}
+        />
         {children}
       </main>
       <Footer />

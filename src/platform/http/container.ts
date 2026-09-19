@@ -342,7 +342,17 @@ export function getContainer(): Container {
       clock,
       audit,
     }),
-    ...buildComplianceUseCases({ uow, users, selfExclusions, ids, clock, audit }),
+    ...buildComplianceUseCases({
+      uow,
+      users,
+      selfExclusions,
+      rgLimits,
+      sessions,
+      ledger,
+      ids,
+      clock,
+      audit,
+    }),
     proposeResult: new ProposeResultUseCase<DbTx>({
       ...resultsDeps,
       markets,

@@ -11,4 +11,10 @@ export interface RgLimitRepository {
    * enforced together).
    */
   listByKind(kind: LimitKind): Promise<RgLimitState[]>;
+
+  /** Every limit row the owner has ever set, across every kind and period (T-812). */
+  listAll(): Promise<RgLimitState[]>;
+
+  /** Upserts one `(kind, period)` row on the unique `(userId, kind, period)` constraint. */
+  upsert(state: RgLimitState): Promise<void>;
 }
