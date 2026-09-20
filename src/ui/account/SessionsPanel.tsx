@@ -5,7 +5,7 @@ import { useState } from "react";
 const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_HEADER_NAME = "x-csrf-token";
 
-export interface SessionSummary {
+interface SessionSummary {
   readonly id: string;
   readonly createdAt: string;
   readonly lastSeenAt: string;

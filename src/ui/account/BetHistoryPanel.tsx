@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Money } from "@/ui/money/Money";
 
-export interface BetHistoryOrder {
+interface BetHistoryOrder {
   readonly id: string;
   readonly marketId: string;
   readonly outcomeId: string;
