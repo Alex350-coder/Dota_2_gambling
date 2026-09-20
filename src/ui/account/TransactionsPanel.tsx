@@ -93,13 +93,14 @@ export function TransactionsPanel({
     try {
       const all: TransactionEntry[] = [];
       let page = 1;
-      let total = meta.total;
-      do {
+      while (true) {
         const result = await fetchPage(page);
         all.push(...result.transactions);
-        total = result.meta.total;
+        if (all.length >= result.meta.total) {
+          break;
+        }
         page += 1;
-      } while (all.length < total);
+      }
       downloadCsv(toCsv(all));
     } catch {
       setError("unable to export transactions — please try again");
