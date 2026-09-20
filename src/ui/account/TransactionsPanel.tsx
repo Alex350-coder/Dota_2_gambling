@@ -93,12 +93,11 @@ export function TransactionsPanel({
     try {
       const all: TransactionEntry[] = [];
       let page = 1;
-      while (true) {
+      let hasMore = true;
+      while (hasMore) {
         const result = await fetchPage(page);
         all.push(...result.transactions);
-        if (all.length >= result.meta.total) {
-          break;
-        }
+        hasMore = all.length < result.meta.total;
         page += 1;
       }
       downloadCsv(toCsv(all));
