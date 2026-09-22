@@ -11,3 +11,5 @@ export type {
 } from "./dispute";
 export { assertActorHasNotInteractedWithMarket } from "./guards";
 export type { InteractedActorGuardDeps } from "./guards";
+export { GetMarketResultUseCase } from "./get-market-result";
+export type { GetMarketResultInput, GetMarketResultDeps } from "./get-market-result";
