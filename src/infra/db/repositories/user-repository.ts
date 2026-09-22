@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { CreateUserInput, UserRecord, UserRepository } from "@/domain/ports";
 import { users } from "../schema/identity";
 import type { DbTx } from "../uow";
@@ -81,6 +81,11 @@ export class DrizzleUserRepository implements UserRepository {
 
   async updateStatus(userId: string, status: UserRecord["status"], updatedAt: Date): Promise<void> {
     await this.tx.update(users).set({ status, updatedAt }).where(eq(users.id, userId));
+  }
+
+  async list(): Promise<UserRecord[]> {
+    const rows = await this.tx.select().from(users).orderBy(desc(users.createdAt));
+    return rows.map(toUserRecord);
   }
 }
 

@@ -25,6 +25,10 @@ import {
   RevokeAllSessionsUseCase,
   ForgotPasswordUseCase,
   ResetPasswordUseCase,
+  ListUsersUseCase,
+  GetUserUseCase,
+  AdminSuspendUserUseCase,
+  AdminRestoreUserUseCase,
   DisableMfaUseCase,
   EnrollMfaUseCase,
   RedeemMfaRecoveryCodeUseCase,
@@ -65,6 +69,10 @@ export interface IdentityUseCases<Tx> {
   readonly verifyMfa: VerifyMfaUseCase<Tx>;
   readonly disableMfa: DisableMfaUseCase<Tx>;
   readonly redeemMfaRecoveryCode: RedeemMfaRecoveryCodeUseCase<Tx>;
+  readonly listUsers: ListUsersUseCase<Tx>;
+  readonly getUser: GetUserUseCase<Tx>;
+  readonly adminSuspendUser: AdminSuspendUserUseCase<Tx>;
+  readonly adminRestoreUser: AdminRestoreUserUseCase<Tx>;
 }
 
 export function buildIdentityUseCases(deps: IdentityContainerDeps): IdentityUseCases<DbTx> {
@@ -145,5 +153,9 @@ export function buildIdentityUseCases(deps: IdentityContainerDeps): IdentityUseC
     verifyMfa: new VerifyMfaUseCase<DbTx>(mfaDeps),
     disableMfa: new DisableMfaUseCase<DbTx>(mfaDeps),
     redeemMfaRecoveryCode: new RedeemMfaRecoveryCodeUseCase<DbTx>(mfaDeps),
+    listUsers: new ListUsersUseCase<DbTx>({ uow, users }),
+    getUser: new GetUserUseCase<DbTx>({ uow, users, audit }),
+    adminSuspendUser: new AdminSuspendUserUseCase<DbTx>({ uow, users, clock, audit }),
+    adminRestoreUser: new AdminRestoreUserUseCase<DbTx>({ uow, users, clock, audit }),
   };
 }

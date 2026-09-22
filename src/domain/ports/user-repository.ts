@@ -40,4 +40,6 @@ export interface UserRepository {
   disableMfa(userId: string, updatedAt: Date): Promise<void>;
   setSelfExcluded(userId: string, revocableAt: Date | null, updatedAt: Date): Promise<void>;
   updateStatus(userId: string, status: UserStatus, updatedAt: Date): Promise<void>;
+  /** Every user, newest first — admin listing (T-903), in-memory paginated like other admin/catalog lists. */
+  list(): Promise<UserRecord[]>;
 }
