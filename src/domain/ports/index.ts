@@ -122,3 +122,4 @@ export type {
   CreateRiskAlertInput,
   RiskAlertFilter,
 } from "./risk-alert-repository";
+export type { AdminDashboardReader, AdminDashboardSummary } from "./admin-dashboard-reader";
