@@ -36,6 +36,7 @@ import {
   DrizzleRgLimitRepository,
   DrizzleSelfExclusionRepository,
   DrizzleRiskAlertRepository,
+  DrizzleAdminDashboardReader,
   LedgerService,
   RateLimiter,
 } from "@/infra/db";
@@ -79,6 +80,7 @@ import {
 } from "@/application/results";
 import { buildSettlementUseCases, type SettlementUseCases } from "./container-settlement";
 import { buildComplianceUseCases, type ComplianceUseCases } from "./container-compliance";
+import { buildAdminUseCases, type AdminUseCases } from "./container-admin";
 
 export interface Container
   extends
@@ -86,6 +88,7 @@ export interface Container
     WalletUseCases<DbTx>,
     BettingUseCases<DbTx>,
     ComplianceUseCases<DbTx>,
+    AdminUseCases<DbTx>,
     IdentityUseCases<DbTx> {
   readonly config: Config;
   readonly clock: Clock;
@@ -116,6 +119,7 @@ export interface Container
   readonly rgLimits: (tx: DbTx, ownerId: string) => DrizzleRgLimitRepository;
   readonly selfExclusions: (tx: DbTx, ownerId: string) => DrizzleSelfExclusionRepository;
   readonly riskAlerts: (tx: DbTx) => DrizzleRiskAlertRepository;
+  readonly dashboard: (tx: DbTx) => DrizzleAdminDashboardReader;
   readonly ledger: LedgerService;
   readonly listGames: ListGamesUseCase<DbTx>;
   readonly getGame: GetGameUseCase<DbTx>;
@@ -202,6 +206,7 @@ export function getContainer(): Container {
   const selfExclusions = (tx: DbTx, ownerId: string) =>
     new DrizzleSelfExclusionRepository(tx, ownerId);
   const riskAlerts = (tx: DbTx) => new DrizzleRiskAlertRepository(tx);
+  const dashboard = (tx: DbTx) => new DrizzleAdminDashboardReader(tx);
   const resultProvider = new ManualAdminResultProvider();
   const ledger = new LedgerService(ids, clock);
 
@@ -287,6 +292,7 @@ export function getContainer(): Container {
     rgLimits,
     selfExclusions,
     riskAlerts,
+    dashboard,
     ledger,
     listGames: new ListGamesUseCase<DbTx>({ uow, games }),
     getGame: new GetGameUseCase<DbTx>({ uow, games }),
@@ -369,6 +375,7 @@ export function getContainer(): Container {
       providerKey: resultProvider.key,
     }),
     ...settlementUseCases,
+    ...buildAdminUseCases({ uow, dashboard, riskAlerts }),
   };
 
   return cached;
