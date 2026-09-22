@@ -114,3 +114,11 @@ export type {
   SelfExclusionRecord,
   CreateSelfExclusionInput,
 } from "./self-exclusion-repository";
+export type {
+  RiskAlertRepository,
+  RiskAlertRecord,
+  RiskAlertSeverity,
+  RiskAlertStatus,
+  CreateRiskAlertInput,
+  RiskAlertFilter,
+} from "./risk-alert-repository";

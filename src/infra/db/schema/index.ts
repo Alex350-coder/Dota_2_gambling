@@ -9,3 +9,4 @@ export * from "./betting";
 export * from "./settlement";
 export * from "./platform";
 export * from "./compliance";
+export * from "./risk";

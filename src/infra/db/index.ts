@@ -33,3 +33,4 @@ export { DrizzleMarketResultRepository } from "./repositories/market-result-repo
 export { DrizzleSettlementRunRepository } from "./repositories/settlement-run-repository";
 export { DrizzleRgLimitRepository } from "./repositories/rg-limit-repository";
 export { DrizzleSelfExclusionRepository } from "./repositories/self-exclusion-repository";
+export { DrizzleRiskAlertRepository } from "./repositories/risk-alert-repository";

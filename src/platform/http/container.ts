@@ -35,6 +35,7 @@ import {
   DrizzleSettlementRunRepository,
   DrizzleRgLimitRepository,
   DrizzleSelfExclusionRepository,
+  DrizzleRiskAlertRepository,
   LedgerService,
   RateLimiter,
 } from "@/infra/db";
@@ -114,6 +115,7 @@ export interface Container
   readonly settlementRuns: (tx: DbTx) => DrizzleSettlementRunRepository;
   readonly rgLimits: (tx: DbTx, ownerId: string) => DrizzleRgLimitRepository;
   readonly selfExclusions: (tx: DbTx, ownerId: string) => DrizzleSelfExclusionRepository;
+  readonly riskAlerts: (tx: DbTx) => DrizzleRiskAlertRepository;
   readonly ledger: LedgerService;
   readonly listGames: ListGamesUseCase<DbTx>;
   readonly getGame: GetGameUseCase<DbTx>;
@@ -199,6 +201,7 @@ export function getContainer(): Container {
   const rgLimits = (tx: DbTx, ownerId: string) => new DrizzleRgLimitRepository(tx, ownerId);
   const selfExclusions = (tx: DbTx, ownerId: string) =>
     new DrizzleSelfExclusionRepository(tx, ownerId);
+  const riskAlerts = (tx: DbTx) => new DrizzleRiskAlertRepository(tx);
   const resultProvider = new ManualAdminResultProvider();
   const ledger = new LedgerService(ids, clock);
 
@@ -283,6 +286,7 @@ export function getContainer(): Container {
     settlementRuns,
     rgLimits,
     selfExclusions,
+    riskAlerts,
     ledger,
     listGames: new ListGamesUseCase<DbTx>({ uow, games }),
     getGame: new GetGameUseCase<DbTx>({ uow, games }),
