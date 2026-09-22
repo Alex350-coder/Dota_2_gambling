@@ -459,3 +459,35 @@ export function betCancelledEvent(
     after: ledgerTransactionId ? { ledgerTransactionId } : null,
   };
 }
+
+/** Admin user-management event builders (T-903). */
+export function userSuspendedEvent(actorId: string, userId: string): AuditEventInput {
+  return {
+    actorType: "admin",
+    actorId,
+    action: "USER_SUSPENDED",
+    entityType: "user",
+    entityId: userId,
+  };
+}
+
+export function userRestoredEvent(actorId: string, userId: string): AuditEventInput {
+  return {
+    actorType: "admin",
+    actorId,
+    action: "USER_RESTORED",
+    entityType: "user",
+    entityId: userId,
+  };
+}
+
+/** OBSERVABILITY.md §1: an admin *reading* another user's data is itself audited. */
+export function adminUserReadEvent(actorId: string, userId: string): AuditEventInput {
+  return {
+    actorType: "admin",
+    actorId,
+    action: "ADMIN_USER_READ",
+    entityType: "user",
+    entityId: userId,
+  };
+}

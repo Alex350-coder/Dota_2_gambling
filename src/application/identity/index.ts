@@ -14,3 +14,7 @@ export {
   RedeemMfaRecoveryCodeUseCase,
   VerifyMfaUseCase,
 } from "./mfa";
+export { ListUsersUseCase } from "./list-users";
+export { GetUserUseCase } from "./get-user";
+export { AdminSuspendUserUseCase } from "./admin-suspend-user";
+export { AdminRestoreUserUseCase } from "./admin-restore-user";
