@@ -47,3 +47,30 @@ export async function POST(request: Request, { params }: RouteParams): Promise<R
     },
   });
 }
+
+/** Read-only current-result lookup for the admin results page (T-905) — no step-up (nothing
+ * mutates), same `result:manage` action as propose/confirm. */
+export async function GET(request: Request, { params }: RouteParams): Promise<Response> {
+  return runRoute({
+    request,
+    rateLimitClass: "default",
+    handler: async () => {
+      const { id } = await params;
+      const parsedId = idParamSchema.safeParse({ id });
+      if (!parsedId.success) {
+        throw new DomainError("VALIDATION_FAILED", "market id must be a UUID");
+      }
+
+      const container = getContainer();
+      const token = sessionTokenFromRequest(request, container.config);
+      await authorize(container, {
+        token,
+        action: "result:manage",
+        resource: { ownerId: "settlement" },
+      });
+
+      const result = await container.getMarketResult.execute({ marketId: parsedId.data.id });
+      return NextResponse.json({ result }, { status: 200 });
+    },
+  });
+}

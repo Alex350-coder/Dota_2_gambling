@@ -77,6 +77,7 @@ import {
   ConfirmResultUseCase,
   DisputeResultUseCase,
   ResolveDisputeUseCase,
+  GetMarketResultUseCase,
 } from "@/application/results";
 import { buildSettlementUseCases, type SettlementUseCases } from "./container-settlement";
 import { buildComplianceUseCases, type ComplianceUseCases } from "./container-compliance";
@@ -148,6 +149,7 @@ export interface Container
   readonly confirmResult: ConfirmResultUseCase<DbTx>;
   readonly disputeResult: DisputeResultUseCase<DbTx>;
   readonly resolveDispute: ResolveDisputeUseCase<DbTx>;
+  readonly getMarketResult: GetMarketResultUseCase<DbTx>;
 }
 
 let cached: Container | undefined;
@@ -374,6 +376,7 @@ export function getContainer(): Container {
       ...resultsDeps,
       providerKey: resultProvider.key,
     }),
+    getMarketResult: new GetMarketResultUseCase<DbTx>({ uow, marketResults }),
     ...settlementUseCases,
     ...buildAdminUseCases({ uow, dashboard, riskAlerts }),
   };
