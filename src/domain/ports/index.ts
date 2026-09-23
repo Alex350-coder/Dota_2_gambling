@@ -123,3 +123,8 @@ export type {
   RiskAlertFilter,
 } from "./risk-alert-repository";
 export type { AdminDashboardReader, AdminDashboardSummary } from "./admin-dashboard-reader";
+export type {
+  AuditEventRepository,
+  AuditEventRecord,
+  AuditEventFilter,
+} from "./audit-event-repository";

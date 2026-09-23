@@ -37,6 +37,7 @@ import {
   DrizzleSelfExclusionRepository,
   DrizzleRiskAlertRepository,
   DrizzleAdminDashboardReader,
+  DrizzleAuditEventRepository,
   LedgerService,
   RateLimiter,
 } from "@/infra/db";
@@ -121,6 +122,7 @@ export interface Container
   readonly selfExclusions: (tx: DbTx, ownerId: string) => DrizzleSelfExclusionRepository;
   readonly riskAlerts: (tx: DbTx) => DrizzleRiskAlertRepository;
   readonly dashboard: (tx: DbTx) => DrizzleAdminDashboardReader;
+  readonly auditEvents: (tx: DbTx) => DrizzleAuditEventRepository;
   readonly ledger: LedgerService;
   readonly listGames: ListGamesUseCase<DbTx>;
   readonly getGame: GetGameUseCase<DbTx>;
@@ -209,6 +211,7 @@ export function getContainer(): Container {
     new DrizzleSelfExclusionRepository(tx, ownerId);
   const riskAlerts = (tx: DbTx) => new DrizzleRiskAlertRepository(tx);
   const dashboard = (tx: DbTx) => new DrizzleAdminDashboardReader(tx);
+  const auditEvents = (tx: DbTx) => new DrizzleAuditEventRepository(tx);
   const resultProvider = new ManualAdminResultProvider();
   const ledger = new LedgerService(ids, clock);
 
@@ -295,6 +298,7 @@ export function getContainer(): Container {
     selfExclusions,
     riskAlerts,
     dashboard,
+    auditEvents,
     ledger,
     listGames: new ListGamesUseCase<DbTx>({ uow, games }),
     getGame: new GetGameUseCase<DbTx>({ uow, games }),
@@ -378,7 +382,7 @@ export function getContainer(): Container {
     }),
     getMarketResult: new GetMarketResultUseCase<DbTx>({ uow, marketResults }),
     ...settlementUseCases,
-    ...buildAdminUseCases({ uow, dashboard, riskAlerts }),
+    ...buildAdminUseCases({ uow, dashboard, riskAlerts, auditEvents }),
   };
 
   return cached;

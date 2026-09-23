@@ -1,6 +1,11 @@
 import type { DbTx } from "@/infra/db";
-import type { AdminDashboardReader, RiskAlertRepository, UnitOfWork } from "@/domain/ports";
-import { GetAdminDashboardUseCase } from "@/application/admin";
+import type {
+  AdminDashboardReader,
+  AuditEventRepository,
+  RiskAlertRepository,
+  UnitOfWork,
+} from "@/domain/ports";
+import { GetAdminDashboardUseCase, SearchAuditEventsUseCase } from "@/application/admin";
 
 /**
  * Admin-console-only use cases (T-901..T-916), split out of `container.ts` (RULE-C06's
@@ -12,14 +17,17 @@ export interface AdminContainerDeps {
   readonly uow: UnitOfWork<DbTx>;
   readonly dashboard: (tx: DbTx) => AdminDashboardReader;
   readonly riskAlerts: (tx: DbTx) => RiskAlertRepository;
+  readonly auditEvents: (tx: DbTx) => AuditEventRepository;
 }
 
 export interface AdminUseCases<Tx> {
   readonly getAdminDashboard: GetAdminDashboardUseCase<Tx>;
+  readonly searchAuditEvents: SearchAuditEventsUseCase<Tx>;
 }
 
 export function buildAdminUseCases(deps: AdminContainerDeps): AdminUseCases<DbTx> {
   return {
     getAdminDashboard: new GetAdminDashboardUseCase<DbTx>(deps),
+    searchAuditEvents: new SearchAuditEventsUseCase<DbTx>(deps),
   };
 }
