@@ -1,5 +1,6 @@
 import { getContainer } from "@/platform/http/container";
 import { runAllReconcileChecks } from "@/infra/db/reconcile-queries";
+import { alertOnReconciliationFailures } from "@/application/admin";
 
 /**
  * T-908 — server-rendered directly against `runAllReconcileChecks` (same repeatable-read
@@ -25,6 +26,7 @@ export default async function AdminSystemPage() {
   }
 
   const failures = results.filter((result) => result.status === "FAIL");
+  await alertOnReconciliationFailures(results, container.alertNotifier);
 
   return (
     <section className="flex flex-col gap-6">

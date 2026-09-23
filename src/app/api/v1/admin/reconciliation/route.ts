@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getContainer } from "@/platform/http/container";
 import { runAllReconcileChecks } from "@/infra/db/reconcile-queries";
+import { alertOnReconciliationFailures } from "@/application/admin";
 import { runRoute } from "@/platform/http/route";
 import { sessionTokenFromRequest } from "@/platform/http/request-context";
 import { authorize } from "@/platform/authz";
@@ -37,6 +38,8 @@ export async function GET(request: Request): Promise<Response> {
       } finally {
         client.release();
       }
+
+      await alertOnReconciliationFailures(results, container.alertNotifier);
 
       return NextResponse.json(
         { generatedAt: new Date().toISOString(), moneyMode: container.config.MONEY_MODE, results },
