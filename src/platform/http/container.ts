@@ -1,3 +1,4 @@
+import type { Pool } from "pg";
 import { CryptoIdGenerator } from "@/infra/id-generator";
 import { SystemClock } from "@/infra/clock";
 import type { Clock } from "@/domain/ports";
@@ -95,6 +96,9 @@ export interface Container
   readonly config: Config;
   readonly clock: Clock;
   readonly uow: DrizzleUnitOfWork;
+  /** Raw pg Pool — used only by reconciliation (T-908, needs `runAllReconcileChecks`'s own
+   * `BEGIN ISOLATION LEVEL REPEATABLE READ` transaction, not the app's default read-committed one). */
+  readonly pool: Pool;
   readonly users: (tx: DbTx) => DrizzleUserRepository;
   readonly userRoles: (tx: DbTx) => DrizzleUserRoleRepository;
   readonly sessions: (tx: DbTx) => DrizzleSessionRepository;
@@ -255,6 +259,7 @@ export function getContainer(): Container {
     config,
     clock,
     uow,
+    pool,
     users,
     userRoles,
     sessions,
