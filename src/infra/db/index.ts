@@ -35,3 +35,4 @@ export { DrizzleRgLimitRepository } from "./repositories/rg-limit-repository";
 export { DrizzleSelfExclusionRepository } from "./repositories/self-exclusion-repository";
 export { DrizzleRiskAlertRepository } from "./repositories/risk-alert-repository";
 export { DrizzleAdminDashboardReader } from "./admin-dashboard-reader";
+export { DrizzleAuditEventRepository } from "./repositories/audit-event-repository";

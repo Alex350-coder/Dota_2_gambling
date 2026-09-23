@@ -92,6 +92,19 @@ export const resolveDisputeSchema = z
   })
   .strict();
 
+export const auditQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).optional(),
+    actorId: z.uuid().optional(),
+    action: z.string().min(1).optional(),
+    entityType: z.string().min(1).optional(),
+    entityId: z.uuid().optional(),
+    from: z.iso.datetime().optional(),
+    to: z.iso.datetime().optional(),
+  })
+  .strict();
+
 export const transitionMarketSchema = z
   .object({
     to: z.enum([
