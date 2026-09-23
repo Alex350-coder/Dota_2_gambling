@@ -130,3 +130,13 @@ export type {
 } from "./audit-event-repository";
 export type { SystemHealthReader, SystemHealthStatus } from "./system-health-reader";
 export type { AlertNotifier, AlertInput, AlertSeverity } from "./alert-notifier";
+export type {
+  RiskSignalReader,
+  SharedDeviceMatch,
+  RepeatedPairing,
+  OrderRateSignal,
+  StakeSpikeSignal,
+  NewAccountBalanceSignal,
+  NewDeviceSignal,
+  CloseWindowSignal,
+} from "./risk-signal-reader";

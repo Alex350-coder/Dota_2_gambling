@@ -4,6 +4,7 @@ import { getContainer } from "@/platform/http/container";
 import { runRoute } from "@/platform/http/route";
 import { sessionTokenFromRequest } from "@/platform/http/request-context";
 import { authorize, requireStepUp } from "@/platform/authz";
+import { triggerCloseWindowDisputeRule } from "@/platform/http/risk-hooks";
 import { idParamSchema } from "../../../../schemas";
 
 interface RouteParams {
@@ -38,6 +39,7 @@ export async function POST(request: Request, { params }: RouteParams): Promise<R
         actorId: userId,
         resultId: parsedId.data.id,
       });
+      triggerCloseWindowDisputeRule(container, result.marketId);
       return NextResponse.json({ result }, { status: 200 });
     },
   });
