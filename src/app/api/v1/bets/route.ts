@@ -5,6 +5,7 @@ import { runRoute } from "@/platform/http/route";
 import { sessionTokenFromRequest } from "@/platform/http/request-context";
 import { authorizeSelf } from "@/platform/http/self-authorize";
 import { requireIdempotencyKey, withHttpIdempotency } from "@/platform/http/idempotent-route";
+import { triggerPlacementRiskRules } from "@/platform/http/risk-hooks";
 import { serializeBetOrder } from "./serialize";
 import { listBetsQuerySchema, placeBetSchema } from "./schemas";
 
@@ -33,6 +34,8 @@ export async function POST(request: Request): Promise<Response> {
             requestedMinor: BigInt(body.amountMinor),
             idempotencyKey,
           });
+
+          triggerPlacementRiskRules(container, order.id);
 
           return {
             status: 201,

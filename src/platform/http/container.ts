@@ -40,6 +40,7 @@ import {
   DrizzleAdminDashboardReader,
   DrizzleAuditEventRepository,
   DrizzleSystemHealthReader,
+  DrizzleRiskSignalReader,
   LedgerService,
   RateLimiter,
 } from "@/infra/db";
@@ -99,6 +100,7 @@ export interface Container
     IdentityUseCases<DbTx> {
   readonly config: Config;
   readonly clock: Clock;
+  readonly ids: CryptoIdGenerator;
   readonly logger: Logger;
   readonly metrics: MetricsRegistry;
   readonly alertNotifier: LogAlertNotifier;
@@ -132,6 +134,7 @@ export interface Container
   readonly rgLimits: (tx: DbTx, ownerId: string) => DrizzleRgLimitRepository;
   readonly selfExclusions: (tx: DbTx, ownerId: string) => DrizzleSelfExclusionRepository;
   readonly riskAlerts: (tx: DbTx) => DrizzleRiskAlertRepository;
+  readonly riskSignals: (tx: DbTx) => DrizzleRiskSignalReader;
   readonly dashboard: (tx: DbTx) => DrizzleAdminDashboardReader;
   readonly auditEvents: (tx: DbTx) => DrizzleAuditEventRepository;
   readonly systemHealth: (tx: DbTx) => DrizzleSystemHealthReader;
@@ -225,6 +228,7 @@ export function getContainer(): Container {
   const selfExclusions = (tx: DbTx, ownerId: string) =>
     new DrizzleSelfExclusionRepository(tx, ownerId);
   const riskAlerts = (tx: DbTx) => new DrizzleRiskAlertRepository(tx);
+  const riskSignals = (tx: DbTx) => new DrizzleRiskSignalReader(tx);
   const dashboard = (tx: DbTx) => new DrizzleAdminDashboardReader(tx);
   const auditEvents = (tx: DbTx) => new DrizzleAuditEventRepository(tx);
   const systemHealth = (tx: DbTx) => new DrizzleSystemHealthReader(tx);
@@ -270,6 +274,7 @@ export function getContainer(): Container {
   cached = {
     config,
     clock,
+    ids,
     logger,
     metrics,
     alertNotifier,
@@ -317,6 +322,7 @@ export function getContainer(): Container {
     rgLimits,
     selfExclusions,
     riskAlerts,
+    riskSignals,
     dashboard,
     auditEvents,
     systemHealth,
