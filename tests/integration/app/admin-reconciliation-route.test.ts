@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createDb, createPool } from "@/infra/db/client";
 import { DrizzleUnitOfWork, type DbTx } from "@/infra/db/uow";
 import { DrizzleSessionRepository } from "@/infra/db/repositories/session-repository";
@@ -24,6 +24,7 @@ process.env.METRICS_ENABLED ??= "true";
 process.env.METRICS_TOKEN ??= "test-metrics-token";
 
 const { GET: reconciliationRoute } = await import("@/app/api/v1/admin/reconciliation/route");
+const { getContainer } = await import("@/platform/http/container");
 
 const APP_URL = "https://app.example.test";
 
@@ -145,6 +146,8 @@ describe("GET /admin/reconciliation (T-908, MET-COV-04)", () => {
 
     const adminId = await createUser(["ADMIN"]);
     const cookie = await loginCookie(adminId);
+    const notifySpy = vi.spyOn(getContainer().alertNotifier, "notify");
+
     const response = await reconciliationRoute(
       new Request(`${APP_URL}/api/v1/admin/reconciliation`, {
         method: "GET",
@@ -157,5 +160,14 @@ describe("GET /admin/reconciliation (T-908, MET-COV-04)", () => {
     };
     const inv03 = body.results.find((r) => r.id === "INV-03");
     expect(inv03?.status).toBe("FAIL");
+
+    expect(notifySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: "P1",
+        code: "RECONCILIATION_FAILURE",
+        details: expect.objectContaining({ invariantId: "INV-03" }),
+      }),
+    );
+    notifySpy.mockRestore();
   });
 });

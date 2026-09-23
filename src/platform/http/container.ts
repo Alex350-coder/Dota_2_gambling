@@ -47,6 +47,7 @@ import { ManualAdminResultProvider } from "@/infra/results";
 import { loadConfig, type Config } from "@/platform/config";
 import { createLogger, type Logger } from "@/platform/logger";
 import { MetricsRegistry } from "@/platform/metrics";
+import { LogAlertNotifier } from "@/platform/alerts";
 import { SessionService } from "@/platform/session";
 import { buildIdentityUseCases, type IdentityUseCases } from "./container-identity";
 import {
@@ -100,6 +101,7 @@ export interface Container
   readonly clock: Clock;
   readonly logger: Logger;
   readonly metrics: MetricsRegistry;
+  readonly alertNotifier: LogAlertNotifier;
   readonly uow: DrizzleUnitOfWork;
   /** Raw pg Pool — used only by reconciliation (T-908, needs `runAllReconcileChecks`'s own
    * `BEGIN ISOLATION LEVEL REPEATABLE READ` transaction, not the app's default read-committed one). */
@@ -184,6 +186,7 @@ export function getContainer(): Container {
   const clock = new SystemClock();
   const logger = createLogger(config.LOG_LEVEL);
   const metrics = new MetricsRegistry();
+  const alertNotifier = new LogAlertNotifier(logger);
   const passwordHasher = new Argon2PasswordHasher({
     memoryCost: config.ARGON2_MEMORY_COST,
     timeCost: config.ARGON2_TIME_COST,
@@ -269,6 +272,7 @@ export function getContainer(): Container {
     clock,
     logger,
     metrics,
+    alertNotifier,
     uow,
     pool,
     users,

@@ -129,3 +129,4 @@ export type {
   AuditEventFilter,
 } from "./audit-event-repository";
 export type { SystemHealthReader, SystemHealthStatus } from "./system-health-reader";
+export type { AlertNotifier, AlertInput, AlertSeverity } from "./alert-notifier";
