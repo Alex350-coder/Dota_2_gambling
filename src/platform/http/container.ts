@@ -39,11 +39,14 @@ import {
   DrizzleRiskAlertRepository,
   DrizzleAdminDashboardReader,
   DrizzleAuditEventRepository,
+  DrizzleSystemHealthReader,
   LedgerService,
   RateLimiter,
 } from "@/infra/db";
 import { ManualAdminResultProvider } from "@/infra/results";
 import { loadConfig, type Config } from "@/platform/config";
+import { createLogger, type Logger } from "@/platform/logger";
+import { MetricsRegistry } from "@/platform/metrics";
 import { SessionService } from "@/platform/session";
 import { buildIdentityUseCases, type IdentityUseCases } from "./container-identity";
 import {
@@ -95,6 +98,8 @@ export interface Container
     IdentityUseCases<DbTx> {
   readonly config: Config;
   readonly clock: Clock;
+  readonly logger: Logger;
+  readonly metrics: MetricsRegistry;
   readonly uow: DrizzleUnitOfWork;
   /** Raw pg Pool — used only by reconciliation (T-908, needs `runAllReconcileChecks`'s own
    * `BEGIN ISOLATION LEVEL REPEATABLE READ` transaction, not the app's default read-committed one). */
@@ -127,6 +132,7 @@ export interface Container
   readonly riskAlerts: (tx: DbTx) => DrizzleRiskAlertRepository;
   readonly dashboard: (tx: DbTx) => DrizzleAdminDashboardReader;
   readonly auditEvents: (tx: DbTx) => DrizzleAuditEventRepository;
+  readonly systemHealth: (tx: DbTx) => DrizzleSystemHealthReader;
   readonly ledger: LedgerService;
   readonly listGames: ListGamesUseCase<DbTx>;
   readonly getGame: GetGameUseCase<DbTx>;
@@ -176,6 +182,8 @@ export function getContainer(): Container {
   const uow = new DrizzleUnitOfWork(db);
   const ids = new CryptoIdGenerator();
   const clock = new SystemClock();
+  const logger = createLogger(config.LOG_LEVEL);
+  const metrics = new MetricsRegistry();
   const passwordHasher = new Argon2PasswordHasher({
     memoryCost: config.ARGON2_MEMORY_COST,
     timeCost: config.ARGON2_TIME_COST,
@@ -216,6 +224,7 @@ export function getContainer(): Container {
   const riskAlerts = (tx: DbTx) => new DrizzleRiskAlertRepository(tx);
   const dashboard = (tx: DbTx) => new DrizzleAdminDashboardReader(tx);
   const auditEvents = (tx: DbTx) => new DrizzleAuditEventRepository(tx);
+  const systemHealth = (tx: DbTx) => new DrizzleSystemHealthReader(tx);
   const resultProvider = new ManualAdminResultProvider();
   const ledger = new LedgerService(ids, clock);
 
@@ -258,6 +267,8 @@ export function getContainer(): Container {
   cached = {
     config,
     clock,
+    logger,
+    metrics,
     uow,
     pool,
     users,
@@ -304,6 +315,7 @@ export function getContainer(): Container {
     riskAlerts,
     dashboard,
     auditEvents,
+    systemHealth,
     ledger,
     listGames: new ListGamesUseCase<DbTx>({ uow, games }),
     getGame: new GetGameUseCase<DbTx>({ uow, games }),
@@ -387,7 +399,7 @@ export function getContainer(): Container {
     }),
     getMarketResult: new GetMarketResultUseCase<DbTx>({ uow, marketResults }),
     ...settlementUseCases,
-    ...buildAdminUseCases({ uow, dashboard, riskAlerts, auditEvents }),
+    ...buildAdminUseCases({ uow, dashboard, riskAlerts, auditEvents, systemHealth }),
   };
 
   return cached;

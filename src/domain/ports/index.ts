@@ -128,3 +128,4 @@ export type {
   AuditEventRecord,
   AuditEventFilter,
 } from "./audit-event-repository";
+export type { SystemHealthReader, SystemHealthStatus } from "./system-health-reader";

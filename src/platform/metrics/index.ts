@@ -1,0 +1,1 @@
+export { MetricsRegistry } from "./registry";

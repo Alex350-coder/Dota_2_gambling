@@ -6,3 +6,5 @@ export type {
   SearchAuditEventsResult,
   SearchAuditEventsDeps,
 } from "./search-audit-events";
+export { GetSystemHealthUseCase } from "./get-system-health";
+export type { GetSystemHealthDeps } from "./get-system-health";
