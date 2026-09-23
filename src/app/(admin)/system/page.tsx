@@ -9,6 +9,8 @@ import { runAllReconcileChecks } from "@/infra/db/reconcile-queries";
 export default async function AdminSystemPage() {
   const container = getContainer();
 
+  const health = await container.getSystemHealth.execute();
+
   const client = await container.pool.connect();
   let results;
   try {
@@ -27,6 +29,31 @@ export default async function AdminSystemPage() {
   return (
     <section className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold text-[var(--text-primary)]">System</h1>
+      <div>
+        <h2 className="text-lg font-medium text-[var(--text-primary)]">Health</h2>
+        <dl className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div>
+            <dt className="text-sm text-[var(--text-secondary)]">Money mode</dt>
+            <dd className="text-[var(--text-primary)]">{container.config.MONEY_MODE}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-[var(--text-secondary)]">Migration version</dt>
+            <dd className="text-[var(--text-primary)]">{health.migrationVersion ?? "unknown"}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-[var(--text-secondary)]">Job queue depth</dt>
+            <dd className="text-[var(--text-primary)]">
+              {health.pendingJobCount} pending
+              {health.failedJobCount > 0 && (
+                <span className="text-[var(--state-danger)]">
+                  {" "}
+                  · {health.failedJobCount} failed
+                </span>
+              )}
+            </dd>
+          </div>
+        </dl>
+      </div>
       <div>
         <h2 className="text-lg font-medium text-[var(--text-primary)]">Reconciliation</h2>
         <p className="text-sm text-[var(--text-secondary)]">

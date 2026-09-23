@@ -36,3 +36,4 @@ export { DrizzleSelfExclusionRepository } from "./repositories/self-exclusion-re
 export { DrizzleRiskAlertRepository } from "./repositories/risk-alert-repository";
 export { DrizzleAdminDashboardReader } from "./admin-dashboard-reader";
 export { DrizzleAuditEventRepository } from "./repositories/audit-event-repository";
+export { DrizzleSystemHealthReader } from "./system-health-reader";
