@@ -4,9 +4,10 @@
     "src/domain/**/!(*.test).ts",
     "src/infra/**/!(*.test).ts",
     "src/application/**/!(*.test).ts",
-    "scripts/**/!(*.test).ts"
+    "scripts/**/!(*.test).ts",
+    "vitest.stryker.config.mts"
   ],
-  "ignore": ["tooling/__fixtures__/**"],
+  "ignore": ["tooling/__fixtures__/**", "tests/perf/k6/**"],
   "ignoreDependencies": ["eslint-config-next", "lint-staged"],
   "ignoreBinaries": ["openssl"]
 }

@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "pnpm",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "testRunner": "vitest",
+  "testRunnerNodeArgs": [],
+  "vitest": {
+    "configFile": "vitest.stryker.config.mts"
+  },
+  "reporters": ["clear-text", "progress", "json"],
+  "mutate": [
+    "src/domain/money/**/*.ts",
+    "src/domain/betting/**/*.ts",
+    "src/domain/matching/**/*.ts",
+    "src/domain/settlement/**/*.ts",
+    "src/domain/ledger/**/*.ts",
+    "!src/domain/**/*.test.ts",
+    "!src/domain/**/index.ts"
+  ],
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 80
+  },
+  "coverageAnalysis": "perTest",
+  "concurrency": 2,
+  "timeoutMS": 15000
+}
