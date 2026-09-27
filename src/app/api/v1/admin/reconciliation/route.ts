@@ -39,7 +39,14 @@ export async function GET(request: Request): Promise<Response> {
         client.release();
       }
 
-      await alertOnReconciliationFailures(results, container.alertNotifier);
+      await container.uow.run((tx) =>
+        alertOnReconciliationFailures(tx, results, {
+          notifier: container.alertNotifier,
+          riskAlerts: container.riskAlerts,
+          ids: container.ids,
+          clock: container.clock,
+        }),
+      );
 
       return NextResponse.json(
         { generatedAt: new Date().toISOString(), moneyMode: container.config.MONEY_MODE, results },

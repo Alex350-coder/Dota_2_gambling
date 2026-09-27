@@ -12,6 +12,7 @@ import { DrizzleUserRepository } from "@/infra/db/repositories/user-repository";
 import { DrizzleMarketRepository } from "@/infra/db/repositories/market-repository";
 import { DrizzleOutcomeRepository } from "@/infra/db/repositories/outcome-repository";
 import { DrizzleMarketResultRepository } from "@/infra/db/repositories/market-result-repository";
+import { DrizzleRiskAlertRepository } from "@/infra/db/repositories/risk-alert-repository";
 import { DrizzleOrderRepository } from "@/infra/db/repositories/order-repository";
 import { DrizzleWalletRepository } from "@/infra/db/repositories/wallet-repository";
 import { DrizzleRgLimitRepository } from "@/infra/db/repositories/rg-limit-repository";
@@ -114,6 +115,7 @@ describe("ProposeResultUseCase", () => {
     audit,
   });
   const proposeResult = new ProposeResultUseCase<DbTx>({
+    riskAlerts: (tx) => new DrizzleRiskAlertRepository(tx),
     uow,
     markets: (tx) => new DrizzleMarketRepository(tx),
     outcomes: (tx) => new DrizzleOutcomeRepository(tx),

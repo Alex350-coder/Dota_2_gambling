@@ -9,6 +9,7 @@ import type {
   MarketResult,
   MarketResultRepository,
   OutcomeRepository,
+  RiskAlertRepository,
   UnitOfWork,
 } from "@/domain/ports";
 import { resultDisputedEvent, resultResolvedEvent } from "@/application/audit/writer";
@@ -77,6 +78,7 @@ export interface ResolveDisputeDeps<Tx> {
   readonly outcomes: (tx: Tx) => OutcomeRepository;
   readonly marketResults: (tx: Tx) => MarketResultRepository;
   readonly betOrders: (tx: Tx, ownerId: string) => BetOrderRepository;
+  readonly riskAlerts: (tx: Tx) => RiskAlertRepository;
   readonly providerKey: string;
   readonly ids: IdGenerator;
   readonly clock: Clock;

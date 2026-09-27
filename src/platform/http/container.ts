@@ -36,19 +36,13 @@ import {
   DrizzleSettlementRunRepository,
   DrizzleRgLimitRepository,
   DrizzleSelfExclusionRepository,
-  DrizzleRiskAlertRepository,
-  DrizzleAdminDashboardReader,
-  DrizzleAuditEventRepository,
-  DrizzleSystemHealthReader,
-  DrizzleRiskSignalReader,
   LedgerService,
   RateLimiter,
 } from "@/infra/db";
 import { ManualAdminResultProvider } from "@/infra/results";
 import { loadConfig, type Config } from "@/platform/config";
-import { createLogger, type Logger } from "@/platform/logger";
-import { MetricsRegistry } from "@/platform/metrics";
-import { LogAlertNotifier } from "@/platform/alerts";
+import { buildAdminRepoFactories, type AdminRepoFactories } from "./container-admin-repos";
+import { buildObservability, type Observability } from "./container-observability";
 import { SessionService } from "@/platform/session";
 import { buildIdentityUseCases, type IdentityUseCases } from "./container-identity";
 import {
@@ -79,16 +73,10 @@ import {
 import { releaseUnmatchedOnClose } from "@/application/betting";
 import { buildWalletUseCases, type WalletUseCases } from "./container-wallet";
 import { buildBettingUseCases, type BettingUseCases } from "./container-betting";
-import {
-  ProposeResultUseCase,
-  ConfirmResultUseCase,
-  DisputeResultUseCase,
-  ResolveDisputeUseCase,
-  GetMarketResultUseCase,
-} from "@/application/results";
 import { buildSettlementUseCases, type SettlementUseCases } from "./container-settlement";
 import { buildComplianceUseCases, type ComplianceUseCases } from "./container-compliance";
 import { buildAdminUseCases, type AdminUseCases } from "./container-admin";
+import { buildResultsUseCases, type ResultsUseCases } from "./container-results";
 
 export interface Container
   extends
@@ -97,13 +85,13 @@ export interface Container
     BettingUseCases<DbTx>,
     ComplianceUseCases<DbTx>,
     AdminUseCases<DbTx>,
+    AdminRepoFactories,
+    Observability,
+    ResultsUseCases<DbTx>,
     IdentityUseCases<DbTx> {
   readonly config: Config;
   readonly clock: Clock;
   readonly ids: CryptoIdGenerator;
-  readonly logger: Logger;
-  readonly metrics: MetricsRegistry;
-  readonly alertNotifier: LogAlertNotifier;
   readonly uow: DrizzleUnitOfWork;
   /** Raw pg Pool — used only by reconciliation (T-908, needs `runAllReconcileChecks`'s own
    * `BEGIN ISOLATION LEVEL REPEATABLE READ` transaction, not the app's default read-committed one). */
@@ -133,11 +121,6 @@ export interface Container
   readonly settlementRuns: (tx: DbTx) => DrizzleSettlementRunRepository;
   readonly rgLimits: (tx: DbTx, ownerId: string) => DrizzleRgLimitRepository;
   readonly selfExclusions: (tx: DbTx, ownerId: string) => DrizzleSelfExclusionRepository;
-  readonly riskAlerts: (tx: DbTx) => DrizzleRiskAlertRepository;
-  readonly riskSignals: (tx: DbTx) => DrizzleRiskSignalReader;
-  readonly dashboard: (tx: DbTx) => DrizzleAdminDashboardReader;
-  readonly auditEvents: (tx: DbTx) => DrizzleAuditEventRepository;
-  readonly systemHealth: (tx: DbTx) => DrizzleSystemHealthReader;
   readonly ledger: LedgerService;
   readonly listGames: ListGamesUseCase<DbTx>;
   readonly getGame: GetGameUseCase<DbTx>;
@@ -162,11 +145,6 @@ export interface Container
   readonly createMarket: CreateMarketUseCase<DbTx>;
   readonly transitionMarket: TransitionMarketUseCase<DbTx>;
   readonly closeMarkets: CloseMarketsUseCase<DbTx>;
-  readonly proposeResult: ProposeResultUseCase<DbTx>;
-  readonly confirmResult: ConfirmResultUseCase<DbTx>;
-  readonly disputeResult: DisputeResultUseCase<DbTx>;
-  readonly resolveDispute: ResolveDisputeUseCase<DbTx>;
-  readonly getMarketResult: GetMarketResultUseCase<DbTx>;
 }
 
 let cached: Container | undefined;
@@ -187,9 +165,7 @@ export function getContainer(): Container {
   const uow = new DrizzleUnitOfWork(db);
   const ids = new CryptoIdGenerator();
   const clock = new SystemClock();
-  const logger = createLogger(config.LOG_LEVEL);
-  const metrics = new MetricsRegistry();
-  const alertNotifier = new LogAlertNotifier(logger);
+  const { logger, metrics, alertNotifier } = buildObservability(config);
   const passwordHasher = new Argon2PasswordHasher({
     memoryCost: config.ARGON2_MEMORY_COST,
     timeCost: config.ARGON2_TIME_COST,
@@ -227,11 +203,8 @@ export function getContainer(): Container {
   const rgLimits = (tx: DbTx, ownerId: string) => new DrizzleRgLimitRepository(tx, ownerId);
   const selfExclusions = (tx: DbTx, ownerId: string) =>
     new DrizzleSelfExclusionRepository(tx, ownerId);
-  const riskAlerts = (tx: DbTx) => new DrizzleRiskAlertRepository(tx);
-  const riskSignals = (tx: DbTx) => new DrizzleRiskSignalReader(tx);
-  const dashboard = (tx: DbTx) => new DrizzleAdminDashboardReader(tx);
-  const auditEvents = (tx: DbTx) => new DrizzleAuditEventRepository(tx);
-  const systemHealth = (tx: DbTx) => new DrizzleSystemHealthReader(tx);
+  const { dashboard, auditEvents, systemHealth, riskAlerts, riskSignals } =
+    buildAdminRepoFactories();
   const resultProvider = new ManualAdminResultProvider();
   const ledger = new LedgerService(ids, clock);
 
@@ -260,7 +233,7 @@ export function getContainer(): Container {
     },
   });
 
-  const resultsDeps = { uow, outcomes, marketResults, betOrders, ids, clock, audit };
+  const resultsDeps = { uow, outcomes, marketResults, betOrders, riskAlerts, ids, clock, audit };
   const settlementUseCases = buildSettlementUseCases({
     ...resultsDeps,
     markets,
@@ -396,18 +369,7 @@ export function getContainer(): Container {
       clock,
       audit,
     }),
-    proposeResult: new ProposeResultUseCase<DbTx>({
-      ...resultsDeps,
-      markets,
-      provider: resultProvider,
-    }),
-    confirmResult: new ConfirmResultUseCase<DbTx>({ uow, marketResults, betOrders, clock, audit }),
-    disputeResult: new DisputeResultUseCase<DbTx>({ uow, marketResults, audit }),
-    resolveDispute: new ResolveDisputeUseCase<DbTx>({
-      ...resultsDeps,
-      providerKey: resultProvider.key,
-    }),
-    getMarketResult: new GetMarketResultUseCase<DbTx>({ uow, marketResults }),
+    ...buildResultsUseCases({ ...resultsDeps, markets, provider: resultProvider }),
     ...settlementUseCases,
     ...buildAdminUseCases({ uow, dashboard, riskAlerts, auditEvents, systemHealth }),
   };
