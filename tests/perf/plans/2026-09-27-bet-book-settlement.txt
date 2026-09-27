@@ -1,0 +1,46 @@
+=== BET PLACEMENT: resting-orders book scan (bet_orders, book_idx) ===
+LockRows  (cost=8.18..8.20 rows=1 width=222) (actual time=0.071..0.072 rows=0 loops=1)
+  Buffers: shared hit=8
+  ->  Sort  (cost=8.18..8.19 rows=1 width=222) (actual time=0.070..0.071 rows=0 loops=1)
+        Sort Key: created_at, seq
+        Sort Method: quicksort  Memory: 25kB
+        Buffers: shared hit=8
+        ->  Index Scan using book_idx on bet_orders  (cost=0.14..8.17 rows=1 width=222) (actual time=0.016..0.016 rows=0 loops=1)
+              Index Cond: (market_id = '33eb2dee-ffe1-44de-8f66-9443bf011103'::uuid)
+              Filter: ((outcome_id <> 'e792979b-6721-49bd-98f7-44a4010c9144'::uuid) AND (user_id <> 'f4d3521a-fba4-4cb5-9c29-e249524afcbf'::uuid) AND (unmatched_minor > 0) AND (status = 'OPEN'::bet_order_status))
+              Rows Removed by Filter: 1
+              Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=213
+Planning Time: 1.288 ms
+Execution Time: 0.193 ms
+
+=== PUBLIC BOOK READ: open orders for one market (bet_orders, book_idx) ===
+Sort  (cost=8.17..8.18 rows=1 width=216) (actual time=0.043..0.043 rows=1 loops=1)
+  Sort Key: created_at, seq
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=2
+  ->  Index Scan using book_idx on bet_orders  (cost=0.14..8.16 rows=1 width=216) (actual time=0.024..0.025 rows=1 loops=1)
+        Index Cond: (market_id = '33eb2dee-ffe1-44de-8f66-9443bf011103'::uuid)
+        Filter: (status = 'OPEN'::bet_order_status)
+        Buffers: shared hit=2
+Planning Time: 0.079 ms
+Execution Time: 0.073 ms
+
+=== SETTLEMENT: active-allocation sweep for one market (match_allocations) ===
+Sort  (cost=11.30..11.30 rows=1 width=100) (actual time=0.023..0.025 rows=1 loops=1)
+  Sort Key: sequence
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=2
+  ->  Bitmap Heap Scan on match_allocations  (cost=4.17..11.29 rows=1 width=100) (actual time=0.011..0.012 rows=1 loops=1)
+        Recheck Cond: (market_id = '33eb2dee-ffe1-44de-8f66-9443bf011103'::uuid)
+        Filter: (status = 'ACTIVE'::allocation_status)
+        Heap Blocks: exact=1
+        Buffers: shared hit=2
+        ->  Bitmap Index Scan on idx_match_allocations_market_id  (cost=0.00..4.17 rows=3 width=0) (actual time=0.005..0.005 rows=1 loops=1)
+              Index Cond: (market_id = '33eb2dee-ffe1-44de-8f66-9443bf011103'::uuid)
+              Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=94
+Planning Time: 0.829 ms
+Execution Time: 0.065 ms
