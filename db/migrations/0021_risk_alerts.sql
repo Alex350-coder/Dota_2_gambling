@@ -24,7 +24,9 @@ CREATE TABLE risk_alerts (
   rule_id text NOT NULL,
   severity risk_alert_severity NOT NULL,
   entity_type text NOT NULL,
-  entity_id uuid NOT NULL,
+  -- text, not uuid: most entities are markets/users/orders (uuid), but reconciliation-triggered
+  -- alerts (R-11/R-12, T-915) key off an invariant id like "INV-03", which is not a uuid.
+  entity_id text NOT NULL,
   payload jsonb NOT NULL,
   status risk_alert_status NOT NULL DEFAULT 'OPEN',
   reviewed_by uuid REFERENCES users (id),

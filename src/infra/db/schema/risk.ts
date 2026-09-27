@@ -23,7 +23,9 @@ export const riskAlerts = pgTable(
     ruleId: text("rule_id").notNull(),
     severity: riskAlertSeverity("severity").notNull(),
     entityType: text("entity_type").notNull(),
-    entityId: uuid("entity_id").notNull(),
+    // text, not uuid: reconciliation-triggered alerts (R-11/R-12) key off an invariant id like
+    // "INV-03", not a uuid — see db/migrations/0021_risk_alerts.sql.
+    entityId: text("entity_id").notNull(),
     payload: jsonb("payload").notNull(),
     status: riskAlertStatus("status").notNull().default("OPEN"),
     reviewedBy: uuid("reviewed_by").references(() => users.id),

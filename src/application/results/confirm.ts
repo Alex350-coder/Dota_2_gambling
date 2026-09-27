@@ -4,8 +4,10 @@ import type {
   AuditWriter,
   BetOrderRepository,
   Clock,
+  IdGenerator,
   MarketResult,
   MarketResultRepository,
+  RiskAlertRepository,
   UnitOfWork,
 } from "@/domain/ports";
 import { resultConfirmedEvent } from "@/application/audit/writer";
@@ -20,6 +22,8 @@ export interface ConfirmResultDeps<Tx> {
   readonly uow: UnitOfWork<Tx>;
   readonly marketResults: (tx: Tx) => MarketResultRepository;
   readonly betOrders: (tx: Tx, ownerId: string) => BetOrderRepository;
+  readonly riskAlerts: (tx: Tx) => RiskAlertRepository;
+  readonly ids: IdGenerator;
   readonly clock: Clock;
   readonly audit: AuditWriter<Tx>;
 }

@@ -12,6 +12,7 @@ import { DrizzleUserRepository } from "@/infra/db/repositories/user-repository";
 import { DrizzleMarketRepository } from "@/infra/db/repositories/market-repository";
 import { DrizzleOutcomeRepository } from "@/infra/db/repositories/outcome-repository";
 import { DrizzleMarketResultRepository } from "@/infra/db/repositories/market-result-repository";
+import { DrizzleRiskAlertRepository } from "@/infra/db/repositories/risk-alert-repository";
 import { DrizzleSettlementRunRepository } from "@/infra/db/repositories/settlement-run-repository";
 import { DrizzleOrderRepository } from "@/infra/db/repositories/order-repository";
 import { DrizzleWalletRepository } from "@/infra/db/repositories/wallet-repository";
@@ -142,6 +143,7 @@ describe("SettleMarketUseCase — payout math (FIN-05..08, T-614)", () => {
     audit,
   });
   const proposeResult = new ProposeResultUseCase<DbTx>({
+    riskAlerts: (tx) => new DrizzleRiskAlertRepository(tx),
     uow,
     markets: (tx) => new DrizzleMarketRepository(tx),
     outcomes: (tx) => new DrizzleOutcomeRepository(tx),
@@ -153,6 +155,8 @@ describe("SettleMarketUseCase — payout math (FIN-05..08, T-614)", () => {
     audit,
   });
   const confirmResult = new ConfirmResultUseCase<DbTx>({
+    riskAlerts: (tx) => new DrizzleRiskAlertRepository(tx),
+    ids,
     uow,
     marketResults: (tx) => new DrizzleMarketResultRepository(tx),
     betOrders: (tx, ownerId) => new DrizzleOrderRepository(tx, ownerId),

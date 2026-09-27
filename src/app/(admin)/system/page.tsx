@@ -26,7 +26,14 @@ export default async function AdminSystemPage() {
   }
 
   const failures = results.filter((result) => result.status === "FAIL");
-  await alertOnReconciliationFailures(results, container.alertNotifier);
+  await container.uow.run((tx) =>
+    alertOnReconciliationFailures(tx, results, {
+      notifier: container.alertNotifier,
+      riskAlerts: container.riskAlerts,
+      ids: container.ids,
+      clock: container.clock,
+    }),
+  );
 
   return (
     <section className="flex flex-col gap-6">

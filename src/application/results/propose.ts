@@ -11,6 +11,7 @@ import type {
   MarketResultRepository,
   MatchResultProvider,
   OutcomeRepository,
+  RiskAlertRepository,
   UnitOfWork,
 } from "@/domain/ports";
 import { resultProposedEvent } from "@/application/audit/writer";
@@ -32,6 +33,7 @@ export interface ProposeResultDeps<Tx> {
   readonly marketResults: (tx: Tx) => MarketResultRepository;
   readonly betOrders: (tx: Tx, ownerId: string) => BetOrderRepository;
   readonly provider: MatchResultProvider;
+  readonly riskAlerts: (tx: Tx) => RiskAlertRepository;
   readonly ids: IdGenerator;
   readonly clock: Clock;
   readonly audit: AuditWriter<Tx>;
