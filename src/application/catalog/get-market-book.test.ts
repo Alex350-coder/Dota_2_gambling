@@ -1,7 +1,22 @@
 import { describe, expect, test } from "vitest";
 import { DomainError } from "@/domain/errors";
-import type { Market, MarketRepository, Outcome, OutcomeRepository } from "@/domain/ports";
+import type {
+  BookRepository,
+  Market,
+  MarketRepository,
+  Outcome,
+  OutcomeRepository,
+} from "@/domain/ports";
 import { GetMarketBookUseCase } from "./get-market-book";
+
+function bookFixture(unmatchedByOutcome: ReadonlyMap<string, bigint> = new Map()): BookRepository {
+  return {
+    findRestingOrders: () => Promise.reject(new Error("not used")),
+    findOpenOrdersByMarket: () => Promise.reject(new Error("not used")),
+    findAllByMarketId: () => Promise.reject(new Error("not used")),
+    sumUnmatchedByOutcome: () => Promise.resolve(unmatchedByOutcome),
+  };
+}
 
 function marketFixture(overrides: Partial<Market> = {}): Market {
   return {
@@ -54,6 +69,7 @@ describe("GetMarketBookUseCase", () => {
       uow: { run: (fn) => fn(undefined) },
       markets: () => markets,
       outcomes: () => outcomeRepo,
+      book: () => bookFixture(new Map([["outcome-1", 7_000n]])),
     });
 
     const book = await useCase.execute({ marketId: "market-1" });
@@ -66,6 +82,10 @@ describe("GetMarketBookUseCase", () => {
       expect(outcome).not.toHaveProperty("counterparty");
       expect(typeof outcome.unmatchedStake).toBe("string");
     }
+    // Regression test: the real per-outcome aggregate must reach the response, not a
+    // hardcoded placeholder — this outcome has open unmatched liquidity, the other doesn't.
+    expect(book.outcomes.find((o) => o.outcomeId === "outcome-1")?.unmatchedStake).toBe("7000");
+    expect(book.outcomes.find((o) => o.outcomeId === "outcome-2")?.unmatchedStake).toBe("0");
   });
 
   test("throws RESOURCE_NOT_FOUND when the market does not exist", async () => {
@@ -86,6 +106,7 @@ describe("GetMarketBookUseCase", () => {
       uow: { run: (fn) => fn(undefined) },
       markets: () => markets,
       outcomes: () => outcomeRepo,
+      book: () => bookFixture(),
     });
 
     await expect(useCase.execute({ marketId: "missing" })).rejects.toThrow(DomainError);

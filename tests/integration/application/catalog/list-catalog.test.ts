@@ -11,6 +11,7 @@ import { DrizzleStreamerRepository } from "@/infra/db/repositories/streamer-repo
 import { DrizzleUserRepository } from "@/infra/db/repositories/user-repository";
 import { DrizzleMarketRepository } from "@/infra/db/repositories/market-repository";
 import { DrizzleOutcomeRepository } from "@/infra/db/repositories/outcome-repository";
+import { DrizzleBookRepository } from "@/infra/db/repositories/book";
 import { DrizzleAuditWriter } from "@/infra/db/audit-writer";
 import { CryptoIdGenerator } from "@/infra/id-generator";
 import { CreateGameUseCase } from "@/application/catalog/game";
@@ -95,7 +96,8 @@ describe("catalog read use-cases (T-410, T-411)", () => {
   const getMarket = new GetMarketUseCase<DbTx>({ uow, markets });
   const listStreamers = new ListStreamersUseCase<DbTx>({ uow, streamers });
   const getStreamer = new GetStreamerUseCase<DbTx>({ uow, streamers });
-  const getMarketBook = new GetMarketBookUseCase<DbTx>({ uow, markets, outcomes });
+  const book = (tx: DbTx) => new DrizzleBookRepository(tx);
+  const getMarketBook = new GetMarketBookUseCase<DbTx>({ uow, markets, outcomes, book });
 
   beforeAll(async () => {
     await resetAndMigrate(pool);
