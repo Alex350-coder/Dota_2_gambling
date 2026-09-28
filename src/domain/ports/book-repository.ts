@@ -25,4 +25,10 @@ export interface BookRepository {
    * terminal status (T-609). `FOR UPDATE` since settlement mutates orders in the same pass.
    */
   findAllByMarketId(marketId: string): Promise<readonly BetOrder[]>;
+  /**
+   * Aggregate unmatched stake per outcome for a market — no counterparty/order/user data, no
+   * row lock (RULE-E02: the public book exposes liquidity totals only). Keyed by outcome id;
+   * an outcome with no open unmatched orders is simply absent from the map, not `0n`.
+   */
+  sumUnmatchedByOutcome(marketId: string): Promise<ReadonlyMap<string, bigint>>;
 }
