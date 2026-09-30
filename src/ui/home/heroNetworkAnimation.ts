@@ -63,6 +63,8 @@ export class HeroNetworkAnimation {
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
   private particles: Particle[] = [];
+  /** Reused across frames: [x0, y0, x1, y1, ...] display positions, filled once per draw(). */
+  private displayPositions = new Float32Array(0);
   private width = 0;
   private height = 0;
   private frameId: number | null = null;
@@ -85,6 +87,7 @@ export class HeroNetworkAnimation {
     this.canvas.style.height = `${String(height)}px`;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.particles = createParticles(width, height, particleCountForWidth(width));
+    this.displayPositions = new Float32Array(this.particles.length * 2);
   }
 
   /** xRatio/yRatio are normalized 0..1 pointer coordinates within the viewport. */
@@ -124,19 +127,26 @@ export class HeroNetworkAnimation {
     this.pointer.y += (this.pointerTarget.y - this.pointer.y) * 0.05;
   }
 
-  /** Orbital drift plus a subtle depth-scaled pointer parallax, both visual-only. */
-  private displayPosition(particle: Particle): { x: number; y: number } {
-    const angle = this.time * particle.orbitSpeed + particle.orbitPhase;
-    const parallaxX = (this.pointer.x - 0.5) * 24 * particle.depth;
-    const parallaxY = (this.pointer.y - 0.5) * 24 * particle.depth;
-    return {
-      x: particle.x + Math.cos(angle) * particle.orbitRadius + parallaxX,
-      y: particle.y + Math.sin(angle) * particle.orbitRadius + parallaxY,
-    };
+  /**
+   * Fills the reused displayPositions buffer for the current frame (orbital drift plus a
+   * subtle depth-scaled pointer parallax, both visual-only) - no per-particle allocation.
+   */
+  private updateDisplayPositions(): void {
+    const { particles, displayPositions, pointer, time } = this;
+    for (let i = 0; i < particles.length; i += 1) {
+      const particle = particles[i];
+      if (!particle) continue;
+      const angle = time * particle.orbitSpeed + particle.orbitPhase;
+      const parallaxX = (pointer.x - 0.5) * 24 * particle.depth;
+      const parallaxY = (pointer.y - 0.5) * 24 * particle.depth;
+      displayPositions[i * 2] = particle.x + Math.cos(angle) * particle.orbitRadius + parallaxX;
+      displayPositions[i * 2 + 1] = particle.y + Math.sin(angle) * particle.orbitRadius + parallaxY;
+    }
   }
 
   private draw(): void {
     this.ctx.clearRect(0, 0, this.width, this.height);
+    this.updateDisplayPositions();
     const farColor = readCssColor(this.canvas, "--accent-secondary", "#22d3ee");
     const nearColor = readCssColor(this.canvas, "--accent-primary", "#6366f1");
     this.drawConnections(nearColor);
@@ -144,11 +154,18 @@ export class HeroNetworkAnimation {
   }
 
   private drawParticles(farColor: string, nearColor: string): void {
-    const { ctx } = this;
-    for (const particle of this.particles) {
-      const { x, y } = this.displayPosition(particle);
+    const { ctx, particles, displayPositions } = this;
+    for (let i = 0; i < particles.length; i += 1) {
+      const particle = particles[i];
+      if (!particle) continue;
       ctx.beginPath();
-      ctx.arc(x, y, particle.radius, 0, Math.PI * 2);
+      ctx.arc(
+        displayPositions[i * 2] ?? 0,
+        displayPositions[i * 2 + 1] ?? 0,
+        particle.radius,
+        0,
+        Math.PI * 2,
+      );
       ctx.fillStyle = particle.depth > 0.6 ? nearColor : farColor;
       ctx.globalAlpha = 0.35 + particle.depth * 0.5;
       ctx.fill();
@@ -158,24 +175,22 @@ export class HeroNetworkAnimation {
 
   /** Lines fade out with distance so the network reads as sparse signal, not a mesh. */
   private drawConnections(color: string): void {
-    const { ctx, particles } = this;
+    const { ctx, particles, displayPositions } = this;
     const maxDistance = 140;
     ctx.strokeStyle = color;
     ctx.lineWidth = 1;
     for (let i = 0; i < particles.length; i += 1) {
-      const a = particles[i];
-      if (!a) continue;
-      const posA = this.displayPosition(a);
+      const ax = displayPositions[i * 2] ?? 0;
+      const ay = displayPositions[i * 2 + 1] ?? 0;
       for (let j = i + 1; j < particles.length; j += 1) {
-        const b = particles[j];
-        if (!b) continue;
-        const posB = this.displayPosition(b);
-        const distance = Math.hypot(posA.x - posB.x, posA.y - posB.y);
+        const bx = displayPositions[j * 2] ?? 0;
+        const by = displayPositions[j * 2 + 1] ?? 0;
+        const distance = Math.hypot(ax - bx, ay - by);
         if (distance >= maxDistance) continue;
         ctx.globalAlpha = (1 - distance / maxDistance) * 0.2;
         ctx.beginPath();
-        ctx.moveTo(posA.x, posA.y);
-        ctx.lineTo(posB.x, posB.y);
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
         ctx.stroke();
       }
     }

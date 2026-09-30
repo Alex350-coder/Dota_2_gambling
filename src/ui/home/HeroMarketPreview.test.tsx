@@ -5,9 +5,9 @@ import { describe, expect, it } from "vitest";
 import { HeroMarketPreview } from "./HeroMarketPreview";
 
 describe("HeroMarketPreview", () => {
-  it("renders as a labelled, non-interactive illustration", () => {
+  it("renders as a single labelled, non-interactive illustration for assistive tech", () => {
     render(<HeroMarketPreview />);
-    const preview = screen.getByLabelText("Illustrative market preview, simulation only");
+    const preview = screen.getByRole("img", { name: /illustrative market preview/i });
     expect(preview.querySelectorAll("button, a, input")).toHaveLength(0);
   });
 
