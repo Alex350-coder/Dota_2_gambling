@@ -23,6 +23,8 @@ export interface GlassHeadlineHeroProps {
   /** Must be a definite CSS length. */
   readonly height?: string;
   readonly className?: string;
+  /** Per-request CSP nonce for the injected <style> tag (see Hero.tsx and middleware.ts). */
+  readonly nonce?: string | undefined;
 }
 
 function ActionArrow() {
@@ -82,6 +84,7 @@ export function GlassHeadlineHero({
   colors,
   height = "100svh",
   className = "",
+  nonce,
 }: GlassHeadlineHeroProps) {
   const rootRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -148,7 +151,7 @@ export function GlassHeadlineHero({
       data-glass={glass}
       onPointerMove={handlePointerMove}
     >
-      <style>{CSS}</style>
+      <style nonce={nonce}>{CSS}</style>
       <canvas ref={canvasRef} className="ghr-canvas" aria-hidden="true" />
       <div className="ghr-content">
         {eyebrow ? <span className="ghr-eyebrow">{eyebrow}</span> : null}
