@@ -6,7 +6,7 @@ import { GlassHeadlineEngine } from "./glassHeadlineEngine";
 import { CSS } from "./glassHeadlineShaders";
 import { useThemeHexColors } from "./useThemeHexColors";
 
-export interface HeroAction {
+interface HeroAction {
   readonly label: string;
   readonly href?: string;
   readonly onClick?: () => void;
