@@ -10,7 +10,7 @@ import { HeroMarketPreview } from "./HeroMarketPreview";
  */
 export function Hero() {
   return (
-    <section className="relative flex min-h-[80vh] flex-col justify-center overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-0)] px-6 py-16 sm:px-10">
+    <section className="relative flex min-h-[70svh] flex-col justify-center overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-0)] px-4 py-12 sm:min-h-[80svh] sm:px-10 sm:py-16">
       <HeroAmbientLayers />
       <HeroBackground />
       <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-start gap-6">

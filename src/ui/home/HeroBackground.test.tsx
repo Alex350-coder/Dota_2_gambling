@@ -13,6 +13,18 @@ function mockMatchMedia(matches: boolean) {
   }));
 }
 
+function stubResizeObserver() {
+  const observe = vi.fn();
+  const disconnect = vi.fn();
+  class FakeResizeObserver {
+    observe = observe;
+    disconnect = disconnect;
+    unobserve = vi.fn();
+  }
+  vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+  return { observe, disconnect };
+}
+
 function fakeCanvasContext() {
   return {
     clearRect: vi.fn(),
@@ -47,6 +59,7 @@ describe("HeroBackground", () => {
       fakeCanvasContext() as unknown as RenderingContext,
     );
     vi.stubGlobal("matchMedia", mockMatchMedia(true));
+    stubResizeObserver();
     const rafSpy = vi.spyOn(window, "requestAnimationFrame");
 
     render(<HeroBackground />);
@@ -54,14 +67,26 @@ describe("HeroBackground", () => {
     expect(rafSpy).not.toHaveBeenCalled();
   });
 
+  it("observes its parent for layout changes, not just window resize", () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      fakeCanvasContext() as unknown as RenderingContext,
+    );
+    vi.stubGlobal("matchMedia", mockMatchMedia(true));
+    const { observe } = stubResizeObserver();
+
+    render(<HeroBackground />);
+
+    expect(observe).toHaveBeenCalledTimes(1);
+  });
+
   it("starts and cleanly cancels the animation frame on unmount", () => {
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
       fakeCanvasContext() as unknown as RenderingContext,
     );
     vi.stubGlobal("matchMedia", mockMatchMedia(false));
+    const { disconnect } = stubResizeObserver();
     const rafSpy = vi.spyOn(window, "requestAnimationFrame").mockReturnValue(1);
     const cafSpy = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
-    const removeListenerSpy = vi.spyOn(window, "removeEventListener");
 
     const { unmount } = render(<HeroBackground />);
     expect(rafSpy).toHaveBeenCalled();
@@ -70,6 +95,6 @@ describe("HeroBackground", () => {
       unmount();
     }).not.toThrow();
     expect(cafSpy).toHaveBeenCalled();
-    expect(removeListenerSpy).toHaveBeenCalledWith("resize", expect.any(Function) as () => void);
+    expect(disconnect).toHaveBeenCalledTimes(1);
   });
 });
