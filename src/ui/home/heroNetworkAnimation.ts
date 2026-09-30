@@ -67,6 +67,8 @@ export class HeroNetworkAnimation {
   private height = 0;
   private frameId: number | null = null;
   private time = 0;
+  private pointer = { x: 0.5, y: 0.5 };
+  private pointerTarget = { x: 0.5, y: 0.5 };
 
   constructor(options: HeroNetworkAnimationOptions) {
     this.canvas = options.canvas;
@@ -83,6 +85,11 @@ export class HeroNetworkAnimation {
     this.canvas.style.height = `${String(height)}px`;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.particles = createParticles(width, height, particleCountForWidth(width));
+  }
+
+  /** xRatio/yRatio are normalized 0..1 pointer coordinates within the viewport. */
+  setPointerTarget(xRatio: number, yRatio: number): void {
+    this.pointerTarget = { x: xRatio, y: yRatio };
   }
 
   renderStaticFrame(): void {
@@ -113,14 +120,18 @@ export class HeroNetworkAnimation {
       particle.x = wrap(particle.x + particle.vx, this.width);
       particle.y = wrap(particle.y + particle.vy, this.height);
     }
+    this.pointer.x += (this.pointerTarget.x - this.pointer.x) * 0.05;
+    this.pointer.y += (this.pointerTarget.y - this.pointer.y) * 0.05;
   }
 
-  /** Orbital drift is a visual-only offset around the particle's base position. */
+  /** Orbital drift plus a subtle depth-scaled pointer parallax, both visual-only. */
   private displayPosition(particle: Particle): { x: number; y: number } {
     const angle = this.time * particle.orbitSpeed + particle.orbitPhase;
+    const parallaxX = (this.pointer.x - 0.5) * 24 * particle.depth;
+    const parallaxY = (this.pointer.y - 0.5) * 24 * particle.depth;
     return {
-      x: particle.x + Math.cos(angle) * particle.orbitRadius,
-      y: particle.y + Math.sin(angle) * particle.orbitRadius,
+      x: particle.x + Math.cos(angle) * particle.orbitRadius + parallaxX,
+      y: particle.y + Math.sin(angle) * particle.orbitRadius + parallaxY,
     };
   }
 
