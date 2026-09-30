@@ -1,14 +1,16 @@
 import Link from "next/link";
+import { HeroBackground } from "./HeroBackground";
 import { HeroMarketPreview } from "./HeroMarketPreview";
 
 /**
- * Public homepage hero (T-717). Static server-rendered content only for now — the
- * decorative animated background is wired in separately so it never gates first paint
- * (MET-PERF-01: TTFB via plain SSR).
+ * Public homepage hero (T-717). Content is server-rendered; only the decorative
+ * background (HeroBackground) is a client island, so it hydrates after first paint and
+ * never gates it (MET-PERF-01: TTFB via plain SSR).
  */
 export function Hero() {
   return (
     <section className="relative flex min-h-[80vh] flex-col justify-center overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-0)] px-6 py-16 sm:px-10">
+      <HeroBackground />
       <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-start gap-6">
         <span className="rounded-full border border-[var(--border-strong)] bg-[var(--surface-1)] px-3 py-1 text-xs font-semibold tracking-widest text-[var(--accent-secondary)] uppercase">
           Esports betting
