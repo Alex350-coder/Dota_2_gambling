@@ -33,13 +33,13 @@ export function Hero() {
         <div className="flex flex-wrap gap-4">
           <Link
             href="/games"
-            className="rounded-lg bg-[var(--accent-primary)] px-6 py-3 text-sm font-semibold text-[var(--accent-primary-contrast)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+            className="rounded-lg bg-[var(--accent-primary)] px-6 py-3 text-sm font-semibold text-[var(--accent-primary-contrast)] shadow-[0_0_0_0_var(--accent-primary)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_24px_-4px_var(--accent-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
             Explore the Arena
           </Link>
           <Link
             href="/how-it-works"
-            className="rounded-lg border border-[var(--border-strong)] px-6 py-3 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--accent-secondary)] hover:text-[var(--accent-secondary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+            className="rounded-lg border border-[var(--border-strong)] px-6 py-3 text-sm font-semibold text-[var(--text-primary)] transition duration-200 hover:-translate-y-0.5 hover:border-[var(--accent-secondary)] hover:text-[var(--accent-secondary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
             How it works
           </Link>
