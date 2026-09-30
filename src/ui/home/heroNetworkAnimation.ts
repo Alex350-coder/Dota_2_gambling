@@ -12,6 +12,9 @@ interface Particle {
   vy: number;
   radius: number;
   depth: number;
+  orbitPhase: number;
+  orbitSpeed: number;
+  orbitRadius: number;
 }
 
 function particleCountForWidth(width: number): number {
@@ -31,6 +34,9 @@ function createParticles(width: number, height: number, count: number): Particle
       vy: (Math.random() - 0.5) * (0.15 + depth * 0.25),
       radius: 1 + depth * 1.8,
       depth,
+      orbitPhase: Math.random() * Math.PI * 2,
+      orbitSpeed: 0.01 + Math.random() * 0.015,
+      orbitRadius: 4 + depth * 6,
     });
   }
   return particles;
@@ -60,6 +66,7 @@ export class HeroNetworkAnimation {
   private width = 0;
   private height = 0;
   private frameId: number | null = null;
+  private time = 0;
 
   constructor(options: HeroNetworkAnimationOptions) {
     this.canvas = options.canvas;
@@ -101,10 +108,20 @@ export class HeroNetworkAnimation {
   }
 
   private advanceParticles(): void {
+    this.time += 1;
     for (const particle of this.particles) {
       particle.x = wrap(particle.x + particle.vx, this.width);
       particle.y = wrap(particle.y + particle.vy, this.height);
     }
+  }
+
+  /** Orbital drift is a visual-only offset around the particle's base position. */
+  private displayPosition(particle: Particle): { x: number; y: number } {
+    const angle = this.time * particle.orbitSpeed + particle.orbitPhase;
+    return {
+      x: particle.x + Math.cos(angle) * particle.orbitRadius,
+      y: particle.y + Math.sin(angle) * particle.orbitRadius,
+    };
   }
 
   private draw(): void {
@@ -118,8 +135,9 @@ export class HeroNetworkAnimation {
   private drawParticles(farColor: string, nearColor: string): void {
     const { ctx } = this;
     for (const particle of this.particles) {
+      const { x, y } = this.displayPosition(particle);
       ctx.beginPath();
-      ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+      ctx.arc(x, y, particle.radius, 0, Math.PI * 2);
       ctx.fillStyle = particle.depth > 0.6 ? nearColor : farColor;
       ctx.globalAlpha = 0.35 + particle.depth * 0.5;
       ctx.fill();
@@ -136,15 +154,17 @@ export class HeroNetworkAnimation {
     for (let i = 0; i < particles.length; i += 1) {
       const a = particles[i];
       if (!a) continue;
+      const posA = this.displayPosition(a);
       for (let j = i + 1; j < particles.length; j += 1) {
         const b = particles[j];
         if (!b) continue;
-        const distance = Math.hypot(a.x - b.x, a.y - b.y);
+        const posB = this.displayPosition(b);
+        const distance = Math.hypot(posA.x - posB.x, posA.y - posB.y);
         if (distance >= maxDistance) continue;
         ctx.globalAlpha = (1 - distance / maxDistance) * 0.2;
         ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
+        ctx.moveTo(posA.x, posA.y);
+        ctx.lineTo(posB.x, posB.y);
         ctx.stroke();
       }
     }
