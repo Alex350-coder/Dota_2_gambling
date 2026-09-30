@@ -38,7 +38,10 @@ export function HeroBackground() {
     }
 
     resize();
-    window.addEventListener("resize", resize);
+    // ResizeObserver catches layout changes a window resize event wouldn't - e.g. a
+    // Suspense boundary revealing this section, or content above it reflowing.
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(parentElement);
     if (!reducedMotion) {
       animation.start();
       // Real cursors only - never simulate one from touch input on coarse pointers.
@@ -48,7 +51,7 @@ export function HeroBackground() {
     }
 
     return () => {
-      window.removeEventListener("resize", resize);
+      resizeObserver.disconnect();
       window.removeEventListener("pointermove", handlePointerMove);
       animation.stop();
     };
