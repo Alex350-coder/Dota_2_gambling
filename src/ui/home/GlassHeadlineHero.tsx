@@ -97,6 +97,14 @@ export function GlassHeadlineHero({
   const activeColors = colors ?? themeColors;
   const palette = paletteOf(activeColors);
   const words = splitWords(title);
+  // `height` is folded into the stylesheet text (not left as an inline style) for the same
+  // reason the full-bleed width/margin rules live there: this dev environment has been
+  // observed dropping specific inline style properties on an element after a client
+  // re-render (React's own hydration-mismatch warning literally names "a browser extension
+  // which messes with the HTML before React loaded" as a known cause) - width/height/margin
+  // were affected, background was not. A static stylesheet rule sidesteps it entirely. `height`
+  // is a developer-supplied prop (never user input), so interpolating it is safe.
+  const scopedCss = `${CSS}\n.ghr-root{height:${height}}`;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -147,11 +155,11 @@ export function GlassHeadlineHero({
     <section
       ref={rootRef}
       className={`ghr-root ${className}`}
-      style={{ height, background: fallbackBackground(palette) }}
+      style={{ background: fallbackBackground(palette) }}
       data-glass={glass}
       onPointerMove={handlePointerMove}
     >
-      <style nonce={nonce}>{CSS}</style>
+      <style nonce={nonce}>{scopedCss}</style>
       <canvas ref={canvasRef} className="ghr-canvas" aria-hidden="true" />
       <div className="ghr-content">
         {eyebrow ? <span className="ghr-eyebrow">{eyebrow}</span> : null}
