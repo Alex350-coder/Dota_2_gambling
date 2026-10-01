@@ -1,10 +1,5 @@
-"use client";
-
-import { Fragment, useEffect, useRef, useState } from "react";
-import { fallbackBackground, paletteOf, splitWords } from "./glassHeadlineMath";
-import { GlassHeadlineEngine } from "./glassHeadlineEngine";
-import { CSS } from "./glassHeadlineShaders";
-import { useThemeHexColors } from "./useThemeHexColors";
+import { Fragment } from "react";
+import { splitWords } from "./glassHeadlineMath";
 
 interface HeroAction {
   readonly label: string;
@@ -18,13 +13,8 @@ export interface GlassHeadlineHeroProps {
   readonly description?: string;
   readonly primaryAction?: HeroAction;
   readonly secondaryAction?: HeroAction;
-  /** Five #rrggbb colors (ground, then four accents). Defaults to the live theme tokens. */
-  readonly colors?: string[];
-  /** Must be a definite CSS length. */
-  readonly height?: string;
   readonly className?: string;
-  /** Per-request CSP nonce for the injected <style> tag (see Hero.tsx and middleware.ts). */
-  readonly nonce?: string | undefined;
+  readonly children?: React.ReactNode;
 }
 
 function ActionArrow() {
@@ -69,11 +59,14 @@ function Action({ action, kind }: { action: HeroAction; kind: "primary" | "secon
 }
 
 /**
- * Glass Headline Hero (T-717) — a hero whose headline is refractive glass, with a flowing color
- * field behind it that bends through the letters. The headline stays a real <h1> (every word a
- * real <span>, laid out by the browser); the glass is WebGL2 paint over it, never a replacement
- * for the text. Falls back to solid type over a CSS gradient without WebGL2 or under
- * prefers-reduced-motion.
+ * Glass Headline Hero content (T-717 follow-up) — the real <h1> (every word a real <span>,
+ * laid out by the browser), eyebrow, description and CTAs for a glass-refraction headline.
+ * This is content only: it renders in normal document flow wherever a page places it, not a
+ * sized box with its own background. The actual WebGL2 glass effect is a separate, page-wide
+ * fixed background (PageGlassBackground, mounted once in PublicLayout) that finds this
+ * component's <h1> via `data-glass-title` and paints the refraction onto it; without that
+ * background mounted (or without WebGL2, or under prefers-reduced-motion), the title just
+ * stays solid white text - never a replacement for the real, selectable, indexable text.
  */
 export function GlassHeadlineHero({
   title,
@@ -81,104 +74,30 @@ export function GlassHeadlineHero({
   description,
   primaryAction,
   secondaryAction,
-  colors,
-  height = "100svh",
   className = "",
-  nonce,
+  children,
 }: GlassHeadlineHeroProps) {
-  const rootRef = useRef<HTMLElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const titleRef = useRef<HTMLHeadingElement | null>(null);
-  const engineRef = useRef<GlassHeadlineEngine | null>(null);
-  const [glass, setGlass] = useState(false);
-  const [generation, setGeneration] = useState(0);
-
-  const themeColors = useThemeHexColors(rootRef);
-  const activeColors = colors ?? themeColors;
-  const palette = paletteOf(activeColors);
   const words = splitWords(title);
-  // `height` is folded into the stylesheet text (not left as an inline style) for the same
-  // reason the full-bleed width/margin rules live there: this dev environment has been
-  // observed dropping specific inline style properties on an element after a client
-  // re-render (React's own hydration-mismatch warning literally names "a browser extension
-  // which messes with the HTML before React loaded" as a known cause) - width/height/margin
-  // were affected, background was not. A static stylesheet rule sidesteps it entirely. `height`
-  // is a developer-supplied prop (never user input), so interpolating it is safe.
-  const scopedCss = `${CSS}\n.ghr-root{height:${height}}`;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const root = rootRef.current;
-    if (!canvas || !root) return;
-
-    const engine = new GlassHeadlineEngine({
-      canvas,
-      root,
-      getTitleElement: () => titleRef.current,
-      initialPalette: paletteOf(activeColors),
-      onReady: () => {
-        setGlass(true);
-      },
-      onContextRestored: () => {
-        setGeneration((g) => g + 1);
-      },
-    });
-    engineRef.current = engine;
-    engine.start();
-
-    return () => {
-      engine.dispose();
-      engineRef.current = null;
-      setGlass(false);
-    };
-    // activeColors is intentionally not a dependency: color updates are pushed via setPalette()
-    // below rather than restarting the WebGL context.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [generation]);
-
-  useEffect(() => {
-    engineRef.current?.setPalette(paletteOf(activeColors));
-  }, [activeColors]);
-
-  useEffect(() => {
-    engineRef.current?.rebuildMask();
-  }, [title]);
-
-  function handlePointerMove(event: React.PointerEvent<HTMLElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = 1 - (event.clientY - rect.top) / rect.height;
-    engineRef.current?.handlePointer(x, y);
-  }
 
   return (
-    <section
-      ref={rootRef}
-      className={`ghr-root ${className}`}
-      style={{ background: fallbackBackground(palette) }}
-      data-glass={glass}
-      onPointerMove={handlePointerMove}
-    >
-      <style nonce={nonce}>{scopedCss}</style>
-      <canvas ref={canvasRef} className="ghr-canvas" aria-hidden="true" />
-      <div className="ghr-content">
-        {eyebrow ? <span className="ghr-eyebrow">{eyebrow}</span> : null}
-        <h1 ref={titleRef} className="ghr-title">
-          {words.map((word, i) => (
-            <Fragment key={word + String(i)}>
-              <span className="ghr-word">{word}</span>
-              {i < words.length - 1 ? " " : null}
-            </Fragment>
-          ))}
-        </h1>
-        {description ? <p className="ghr-desc">{description}</p> : null}
-        {primaryAction || secondaryAction ? (
-          <div className="ghr-actions">
-            {primaryAction ? <Action action={primaryAction} kind="primary" /> : null}
-            {secondaryAction ? <Action action={secondaryAction} kind="secondary" /> : null}
-          </div>
-        ) : null}
-      </div>
-    </section>
+    <div className={`ghr-content ${className}`}>
+      {eyebrow ? <span className="ghr-eyebrow">{eyebrow}</span> : null}
+      <h1 data-glass-title="" className="ghr-title">
+        {words.map((word, i) => (
+          <Fragment key={word + String(i)}>
+            <span className="ghr-word">{word}</span>
+            {i < words.length - 1 ? " " : null}
+          </Fragment>
+        ))}
+      </h1>
+      {description ? <p className="ghr-desc">{description}</p> : null}
+      {primaryAction || secondaryAction ? (
+        <div className="ghr-actions">
+          {primaryAction ? <Action action={primaryAction} kind="primary" /> : null}
+          {secondaryAction ? <Action action={secondaryAction} kind="secondary" /> : null}
+        </div>
+      ) : null}
+      {children}
+    </div>
   );
 }
