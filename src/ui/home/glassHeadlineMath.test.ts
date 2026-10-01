@@ -85,6 +85,11 @@ describe("fallbackBackground", () => {
     expect(css.match(/radial-gradient/g)).toHaveLength(3);
     expect(css).toMatch(/rgba\(\d+,\d+,\d+,1\)$/);
   });
+
+  it("falls back to black for missing or short palette slots", () => {
+    const css = fallbackBackground([]);
+    expect(css).toMatch(/rgba\(0,0,0,1\)$/);
+  });
 });
 
 describe("follow", () => {
