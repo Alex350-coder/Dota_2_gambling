@@ -50,6 +50,15 @@ describe("GlassHeadlineHero", () => {
     );
   });
 
+  it("renders an action with no href as a real button, not a link", () => {
+    const onClick = () => undefined;
+    render(
+      <GlassHeadlineHero title="Bend the light" primaryAction={{ label: "Open modal", onClick }} />,
+    );
+    const button = screen.getByRole("button", { name: "Open modal" });
+    expect(button).toHaveAttribute("type", "button");
+  });
+
   it("renders extra children below the CTAs", () => {
     render(
       <GlassHeadlineHero title="Bend the light">
