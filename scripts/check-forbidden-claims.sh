@@ -7,6 +7,11 @@ set -euo pipefail
 
 PATTERN='licensed|licencia de mincetur|regulated by|autorizado por|supervised by|guaranteed profit|risk-free|ganancia garantizada|sin riesgo|official partner of'
 
+# Disclaimers correctly deny these claims (e.g. "Not a licensed ... operator") rather than making
+# them; a bare keyword match can't tell the two apart, so lines using an explicit negation right
+# before the keyword are not forbidden claims and are excluded below.
+NEGATION='not( an?)? (licensed|licencia|regulated|autorizado|supervised|guaranteed|risk-free|official partner)|no (licensed|regulated|guarantee)'
+
 MATCHES=$(grep -rniE "$PATTERN" \
   --include='*.md' \
   --include='*.tsx' \
@@ -18,7 +23,7 @@ MATCHES=$(grep -rniE "$PATTERN" \
   --exclude-dir=coverage-parts \
   --exclude-dir=scripts \
   --exclude-dir=tests \
-  src README.md SECURITY.md 2>/dev/null || true)
+  src README.md SECURITY.md 2>/dev/null | grep -viE "$NEGATION" || true)
 
 if [ -n "$MATCHES" ]; then
   echo "Forbidden claim(s) found (MET-COMP-02):"
