@@ -184,8 +184,13 @@ void main() {
 // --focus-ring token (not a hardcoded white) so keyboard focus stays visually consistent with
 // the rest of the app; the white "glass" button fills/hovers are this component's own
 // self-contained look and are left as designed.
+//
+// .ghr-root's width/margin are a static full-bleed rule (not inline style, even though the
+// component is nested inside the page's centered max-w-6xl/px-4 container): the standard
+// "break out of a constrained parent" trick, `width:100vw` plus negative margins equal to half
+// the viewport minus half the parent, pulling both edges out to the true viewport edge.
 export const CSS =
-  ".ghr-root{position:relative;width:100%;overflow:hidden;color:#FFFFFF;container-type:inline-size;touch-action:pan-y}" +
+  ".ghr-root{position:relative;width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);overflow:hidden;color:#FFFFFF;container-type:inline-size;touch-action:pan-y}" +
   ".ghr-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:none;opacity:0;" +
   "transition:opacity 700ms cubic-bezier(0.23,1,0.32,1)}" +
   ".ghr-root[data-glass='true'] .ghr-canvas{opacity:1}" +

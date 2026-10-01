@@ -34,4 +34,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  /* The hero's full-bleed width:100vw (T-717, GlassHeadlineHero) can measure a hair wider than
+   * the visible viewport on platforms where the scrollbar occupies layout space, since vw units
+   * include that gutter. Clipping horizontally here keeps that from ever producing a real
+   * horizontal scrollbar site-wide. */
+  overflow-x: clip;
 }

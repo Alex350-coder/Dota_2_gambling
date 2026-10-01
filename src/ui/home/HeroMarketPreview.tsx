@@ -10,7 +10,7 @@ export function HeroMarketPreview() {
     <div
       role="img"
       aria-label="Illustrative market preview: Player A stakes $100 to win, Player B stakes $100 to lose, at fixed 1.8x odds, with a $20 streamer commission. Simulation only, not a live market."
-      className="grid w-full max-w-md grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)]/80 p-4 sm:max-w-lg"
+      className="mx-auto grid w-full max-w-md grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)]/80 p-4 sm:max-w-lg"
     >
       <PreviewSide label="Player A" amount="$100" outcome="WIN" tone="positive" />
       <div className="flex flex-col items-center gap-1">
