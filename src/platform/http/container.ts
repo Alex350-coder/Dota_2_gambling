@@ -308,7 +308,7 @@ export function getContainer(): Container {
     getMarket: new GetMarketUseCase<DbTx>({ uow, markets }),
     listStreamers: new ListStreamersUseCase<DbTx>({ uow, streamers }),
     getStreamer: new GetStreamerUseCase<DbTx>({ uow, streamers }),
-    getMarketBook: new GetMarketBookUseCase<DbTx>({ uow, markets, outcomes }),
+    getMarketBook: new GetMarketBookUseCase<DbTx>({ uow, markets, outcomes, book }),
     createGame: new CreateGameUseCase<DbTx>({ uow, games, ids, audit }),
     createGameMode: new CreateGameModeUseCase<DbTx>({ uow, games, ids, audit }),
     createTournament: new CreateTournamentUseCase<DbTx>({ uow, games, tournaments, ids, audit }),

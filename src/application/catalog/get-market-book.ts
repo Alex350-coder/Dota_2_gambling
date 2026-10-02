@@ -1,5 +1,10 @@
 import { DomainError } from "@/domain/errors";
-import type { MarketRepository, OutcomeRepository, UnitOfWork } from "@/domain/ports";
+import type {
+  BookRepository,
+  MarketRepository,
+  OutcomeRepository,
+  UnitOfWork,
+} from "@/domain/ports";
 
 interface MarketBookOutcome {
   readonly outcomeId: string;
@@ -23,14 +28,13 @@ export interface GetMarketBookDeps<Tx> {
   readonly uow: UnitOfWork<Tx>;
   readonly markets: (tx: Tx) => MarketRepository;
   readonly outcomes: (tx: Tx) => OutcomeRepository;
+  readonly book: (tx: Tx) => BookRepository;
 }
 
 /**
- * Aggregate-liquidity-only market book (T-411). Phase 4 precedes bet placement
- * (Plan.md P4 excludes betting/matching), so no order can exist yet against any
- * market — every outcome's unmatched stake is correctly zero here. Phase 5's
- * order-book aggregation replaces the zero once bet placement exists, without
- * changing this shape or its no-counterparty-data guarantee.
+ * Aggregate-liquidity-only market book (T-411). Per-outcome unmatched stake is a real
+ * aggregate over open orders (`BookRepository.sumUnmatchedByOutcome`) — no counterparty,
+ * order, or user data is exposed (RULE-E02), only a liquidity total per outcome.
  */
 export class GetMarketBookUseCase<Tx> {
   constructor(private readonly deps: GetMarketBookDeps<Tx>) {}
@@ -45,6 +49,7 @@ export class GetMarketBookUseCase<Tx> {
       }
 
       const outcomes = await this.deps.outcomes(tx).listByMarketId(input.marketId);
+      const unmatchedByOutcome = await this.deps.book(tx).sumUnmatchedByOutcome(input.marketId);
       return {
         marketId: market.id,
         status: market.status,
@@ -52,7 +57,7 @@ export class GetMarketBookUseCase<Tx> {
           outcomeId: outcome.id,
           code: outcome.code,
           label: outcome.label,
-          unmatchedStake: "0",
+          unmatchedStake: (unmatchedByOutcome.get(outcome.id) ?? 0n).toString(),
         })),
       };
     });
