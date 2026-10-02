@@ -1,31 +1,10 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { Hero } from "./Hero";
 
-// jsdom has no matchMedia; GlassHeadlineHero's engine reads it on construction.
-function stubMatchMedia() {
-  vi.stubGlobal(
-    "matchMedia",
-    vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })),
-  );
-}
-
 describe("Hero", () => {
-  beforeEach(() => {
-    stubMatchMedia();
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it("renders a single top-level heading", () => {
     render(<Hero />);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);

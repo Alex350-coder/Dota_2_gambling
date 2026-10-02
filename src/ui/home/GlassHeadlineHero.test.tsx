@@ -1,41 +1,21 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { GlassHeadlineHero } from "./GlassHeadlineHero";
 
 /**
- * jsdom has no WebGL2, so HTMLCanvasElement.getContext("webgl2") returns null here - exactly
- * the documented fallback path: the engine never starts, `data-glass` stays "false", and the
- * headline shows as solid type over the CSS gradient. That fallback is what's exercised below.
- * jsdom also has no matchMedia, so it's stubbed (the engine reads it eagerly on construction,
- * before it even knows whether WebGL2 is available).
+ * GlassHeadlineHero is pure content (T-717 follow-up) — no canvas, no WebGL, no client-side
+ * state. The actual glass effect is painted by a separate page-wide background
+ * (PageGlassBackground) that finds this component's <h1> via `data-glass-title`; these tests
+ * only cover the content itself.
  */
-function stubMatchMedia() {
-  vi.stubGlobal(
-    "matchMedia",
-    vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })),
-  );
-}
-
 describe("GlassHeadlineHero", () => {
-  beforeEach(() => {
-    stubMatchMedia();
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it("renders a single real <h1> with one selectable span per word", () => {
+  it("renders a single real <h1> with one selectable span per word, tagged for the background", () => {
     render(<GlassHeadlineHero title="Bend the light" />);
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading).toHaveTextContent("Bend the light");
+    expect(heading).toHaveAttribute("data-glass-title");
     expect(heading.querySelectorAll(".ghr-word")).toHaveLength(3);
     expect(heading.querySelectorAll(".ghr-word")[0]).toHaveTextContent("Bend");
   });
@@ -70,22 +50,12 @@ describe("GlassHeadlineHero", () => {
     );
   });
 
-  it("renders an aria-hidden canvas that never intercepts pointer events", () => {
-    const { container } = render(<GlassHeadlineHero title="Bend the light" />);
-    const canvas = container.querySelector("canvas");
-    expect(canvas).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("stays in the solid-type fallback state when WebGL2 is unavailable", () => {
-    const { container } = render(<GlassHeadlineHero title="Bend the light" />);
-    const root = container.querySelector(".ghr-root");
-    expect(root).toHaveAttribute("data-glass", "false");
-  });
-
-  it("unmounts cleanly when the WebGL2 engine never started", () => {
-    const { unmount } = render(<GlassHeadlineHero title="Bend the light" />);
-    expect(() => {
-      unmount();
-    }).not.toThrow();
+  it("renders extra children below the CTAs", () => {
+    render(
+      <GlassHeadlineHero title="Bend the light">
+        <p>Extra content</p>
+      </GlassHeadlineHero>,
+    );
+    expect(screen.getByText("Extra content")).toBeInTheDocument();
   });
 });

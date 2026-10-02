@@ -179,18 +179,26 @@ void main() {
   o = vec4(col, 1.0);
 }`;
 
-// Presentational CSS for the hero shell/content. Field colors are supplied at runtime (see
-// useThemeHexColors.ts) rather than baked in here. The focus ring uses this site's shared
-// --focus-ring token (not a hardcoded white) so keyboard focus stays visually consistent with
-// the rest of the app; the white "glass" button fills/hovers are this component's own
-// self-contained look and are left as designed.
+// Presentational CSS for the fixed page background and the hero's content block. Field colors
+// are supplied at runtime (see useThemeHexColors.ts) rather than baked in here. The focus ring
+// uses this site's shared --focus-ring token (not a hardcoded white) so keyboard focus stays
+// visually consistent with the rest of the app; the white "glass" button fills/hovers are this
+// component's own self-contained look and are left as designed.
+//
+// The background and the content are two separate DOM subtrees now (T-717 follow-up): the
+// background is mounted once, fixed behind the nav bar/main content/footer on every public page
+// (see PageGlassBackground.tsx); the content (.ghr-content and everything under it) renders
+// wherever a page actually places it, in normal document flow - a "container", not the thing
+// that owns the canvas. Because of that split, the glass/no-glass state can't be reached via a
+// CSS descendant selector from one subtree into the other, so it's mirrored onto <html> as
+// data-glass by PageGlassBackground and read from there.
 export const CSS =
-  ".ghr-root{position:relative;width:100%;overflow:hidden;color:#FFFFFF;container-type:inline-size;touch-action:pan-y}" +
-  ".ghr-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:none;opacity:0;" +
+  ".ghr-bg-root{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}" +
+  ".ghr-bg-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:none;opacity:0;" +
   "transition:opacity 700ms cubic-bezier(0.23,1,0.32,1)}" +
-  ".ghr-root[data-glass='true'] .ghr-canvas{opacity:1}" +
-  ".ghr-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;" +
-  "gap:28px;height:100%;padding:72px 24px;box-sizing:border-box;text-align:center}" +
+  "html[data-glass='true'] .ghr-bg-canvas{opacity:1}" +
+  ".ghr-content{display:flex;flex-direction:column;align-items:center;gap:28px;" +
+  "padding:96px 24px;box-sizing:border-box;text-align:center;color:#FFFFFF;container-type:inline-size}" +
   ".ghr-eyebrow,.ghr-desc,.ghr-actions{animation:ghr-in 700ms cubic-bezier(0.23,1,0.32,1) both}" +
   ".ghr-desc{animation-delay:120ms}" +
   ".ghr-actions{animation-delay:200ms}" +
@@ -200,7 +208,7 @@ export const CSS =
   ".ghr-title{margin:0;max-width:12ch;font-size:clamp(3.75rem,calc(13cqw + 1.5rem),12.5rem);font-weight:800;line-height:.95;" +
   "letter-spacing:-0.025em;color:#FFFFFF;text-wrap:balance;" +
   "transition:color 900ms cubic-bezier(0.23,1,0.32,1)}" +
-  ".ghr-root[data-glass='true'] .ghr-title{color:transparent}" +
+  "html[data-glass='true'] .ghr-title{color:transparent}" +
   ".ghr-word::selection{background:rgba(255,255,255,.28)}" +
   ".ghr-desc{margin:0;max-width:38rem;font-size:clamp(1rem,1.7cqw,1.25rem);line-height:1.55;color:rgba(255,255,255,.8)}" +
   ".ghr-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:8px}" +

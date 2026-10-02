@@ -17,7 +17,7 @@ const LEGAL_LINKS: readonly { href: string; label: string }[] = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-[var(--border-default)] bg-[var(--surface-1)]">
+    <footer className="border-t border-[var(--border-default)] bg-[var(--surface-1)]/70 backdrop-blur-md">
       <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-[var(--text-secondary)]">
         <p className="mb-4">
           This is a portfolio engineering project. All amounts are simulated; no real money is ever
