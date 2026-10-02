@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, ne } from "drizzle-orm";
+import { and, asc, eq, gt, ne, sql } from "drizzle-orm";
 import type { BetOrder } from "@/domain/betting";
 import type { BookRepository } from "@/domain/ports";
 import { toMinor } from "@/domain/money";
@@ -65,6 +65,25 @@ export class DrizzleBookRepository implements BookRepository {
       .for("update");
 
     return rows.map((row) => this.toBetOrder(row));
+  }
+
+  async sumUnmatchedByOutcome(marketId: string): Promise<ReadonlyMap<string, bigint>> {
+    const rows = await this.tx
+      .select({
+        outcomeId: betOrders.outcomeId,
+        total: sql<string>`sum(${betOrders.unmatchedMinor})`,
+      })
+      .from(betOrders)
+      .where(
+        and(
+          eq(betOrders.marketId, marketId),
+          gt(betOrders.unmatchedMinor, 0n),
+          eq(betOrders.status, "OPEN"),
+        ),
+      )
+      .groupBy(betOrders.outcomeId);
+
+    return new Map(rows.map((row) => [row.outcomeId, BigInt(row.total)]));
   }
 
   private toBetOrder(row: typeof betOrders.$inferSelect): BetOrder {
