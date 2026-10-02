@@ -37,6 +37,7 @@
     "coverage:merge": "tsx scripts/coverage-merge.ts",
     "coverage:check": "tsx scripts/coverage-check.ts",
     "test:manifest": "tsx scripts/test-manifest.ts",
+    "test:mutation": "stryker run",
     "check:money-format": "tsx scripts/check-money-formatting.ts",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm test && pnpm test:manifest && pnpm build",
     "verify:full": "pnpm verify && pnpm test:e2e",
@@ -57,6 +58,8 @@
     "@commitlint/config-conventional": "^21.2.0",
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.62.1",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
@@ -65,7 +68,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.1",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.11",
     "dependency-cruiser": "^18.2.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
@@ -87,7 +90,17 @@
   "pnpm": {
     "overrides": {
       "sharp": ">=0.35.4",
-      "postcss": ">=8.5.18"
+      "postcss": ">=8.5.18",
+      "esbuild@<=0.24.2": ">=0.25.0",
+      "qs@>=6.11.1 <=6.15.1": ">=6.15.2",
+      "qs@>=6.14.2 <=6.15.3": ">=6.16.0",
+      "qs@>=2.2.5 <6.16.0": ">=6.16.0",
+      "fast-uri@>=3.1.3 <3.1.6": ">=3.1.6",
+      "fast-uri@>=3.0.0 <3.1.6": ">=3.1.6",
+      "fast-uri@>=3.1.2 <3.1.6": ">=3.1.6",
+      "vitest@>=2.1.0 <4.1.11": ">=4.1.11 <5.0.0",
+      "@vitest/mocker@>=2.1.0 <4.1.11": ">=4.1.11 <5.0.0",
+      "js-yaml@>=4.0.0 <4.3.2": ">=4.3.2"
     }
   }
 }
