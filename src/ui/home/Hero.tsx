@@ -2,9 +2,9 @@ import { GlassHeadlineHero } from "./GlassHeadlineHero";
 import { HeroMarketPreview } from "./HeroMarketPreview";
 
 /**
- * Public homepage hero (T-717). GlassHeadlineHero owns its own content (eyebrow, headline,
- * description, CTAs) and the WebGL2 background; HeroMarketPreview renders as a normal sibling
- * below it, picking up the parent page's flex gap like every other homepage section.
+ * Public homepage hero content (T-717 follow-up). The WebGL2 glass background is a separate,
+ * page-wide fixed layer (PageGlassBackground, mounted once in PublicLayout) that paints onto
+ * this component's <h1> - this is just the content, rendered in normal flow.
  */
 export function Hero() {
   return (
@@ -15,7 +15,6 @@ export function Hero() {
         description="A spectator-driven betting platform where matched bets compete against each other, at fixed 1.8x odds. Every amount here is simulated."
         primaryAction={{ label: "Explore the Arena", href: "/games" }}
         secondaryAction={{ label: "How it works", href: "/how-it-works" }}
-        height="min(100svh,56rem)"
       />
       <HeroMarketPreview />
     </>

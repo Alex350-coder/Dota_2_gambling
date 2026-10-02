@@ -251,8 +251,12 @@ export class GlassHeadlineEngine {
    */
   private buildMask(): void {
     const { gl, programs } = this;
+    if (!gl || !programs || !this.field) return;
     const heading = this.getTitleElement();
-    if (!gl || !programs || !heading || !this.field) return;
+    if (!heading) {
+      this.clearMask(gl);
+      return;
+    }
     const scale = this.lite ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
     const result = buildTextMask({ heading, root: this.root, scale });
     if (!result || result.key === this.builtKey) return;
@@ -260,6 +264,22 @@ export class GlassHeadlineEngine {
     this.bevel = bevelPx(result.fontPx, scale);
     this.uploadMask(result);
     this.blurMask(gl, programs, result);
+  }
+
+  /**
+   * No headline on this route (every route but the homepage today) - or it was just unmounted
+   * mid-navigation. Clears the height-field's "inside" channel so the glass shader falls fully
+   * back to the plain field rather than keeping whatever shape was last drawn for a different
+   * page's title frozen on screen.
+   */
+  private clearMask(gl: WebGL2RenderingContext): void {
+    if (this.builtKey === "") return;
+    this.builtKey = "";
+    if (!this.blurB) return;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.blurB.fbo);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
   private uploadMask(result: TextMaskResult): void {
@@ -404,6 +424,11 @@ export class GlassHeadlineEngine {
 
     this.judgePerformance(raw);
     if (this.animating()) this.time += dt;
+    // The canvas is a fixed, page-wide background (T-717 follow-up) but the headline it masks
+    // scrolls normally with the page, so the mask has to be re-checked continuously, not just on
+    // resize/route change - buildMask()'s own layout-key cache makes this a cheap no-op on the
+    // (overwhelming majority of) frames where the title's on-screen position hasn't moved.
+    this.buildMask();
 
     const [targetX, targetY] = this.updateLight(now, dt);
     this.draw();
