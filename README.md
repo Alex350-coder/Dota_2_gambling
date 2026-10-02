@@ -58,30 +58,136 @@ No money is created: `winner_return + commission = 2 × matched`, always, in int
 
 ## Screenshots
 
-| Home                                    | Market (live book + bet form)               | How it works                                            |
-| --------------------------------------- | ------------------------------------------- | ------------------------------------------------------- |
-| ![Home page](docs/screenshots/home.jpg) | ![Market page](docs/screenshots/market.jpg) | ![How it works page](docs/screenshots/how-it-works.jpg) |
+The app has three areas: a **public** site, a signed-in **account** area, and an **admin** console.
+All captures are from a local dev server against the demo-seeded database, at 1440×900.
 
-Captured from a local build running against a demo-seeded database (`pnpm demo`).
+### Public site
+
+![Home page](docs/screenshots/home.jpg)
+
+| Page                                                                     | What it shows                                                       |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| ![Games](docs/screenshots/games.jpg)                                     | **Games** — the game catalog (Dota 2 is the seed content)           |
+| ![Matches](docs/screenshots/matches.jpg)                                 | **Matches** — upcoming matches with their scheduled time            |
+| ![Streamers](docs/screenshots/streamers.jpg)                             | **Streamers** — hosts who run markets and earn the commission       |
+| ![How it works](docs/screenshots/how-it-works.jpg)                       | **How it works** — the 1.8 odds and a worked S/100 vs S/100 example |
+| ![FAQ](docs/screenshots/faq.jpg)                                         | **FAQ**                                                             |
+| ![Responsible gambling](docs/screenshots/legal-responsible-gambling.jpg) | **Legal pages** — a footer-linked set of 12 technical drafts        |
+
+### Betting on a market
+
+The market page shows the outcomes with their **unmatched liquidity**, the streamer's commission
+(disclosed as a conflict of interest), and the bet form with a live estimated return at fixed odds
+of 1.8. Signed-in users see their own orders below the form.
+
+| Market with bet form                              | After placing a bet                                 |
+| ------------------------------------------------- | --------------------------------------------------- |
+| ![Bet form](docs/screenshots/market-bet-form.jpg) | ![After bet](docs/screenshots/market-after-bet.jpg) |
+
+Above: a PEN 30.00 stake on Team B finds no counterparty (Team A has no liquidity left), so the whole order stays `OPEN` and unmatched, and can be cancelled. When liquidity exists, the matched part is locked and the rest stays open.
+
+### Account area (`/account/**`, signed in)
+
+| Profile                                  | Wallet (SIMULATED)                             | Bets                                       |
+| ---------------------------------------- | ---------------------------------------------- | ------------------------------------------ |
+| ![Profile](docs/screenshots/account.png) | ![Wallet](docs/screenshots/account-wallet.png) | ![Bets](docs/screenshots/account-bets.png) |
+
+| Transactions                                               | Responsible gambling                                                       | Security / Sessions                                                                                   |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| ![Transactions](docs/screenshots/account-transactions.png) | ![Responsible gambling](docs/screenshots/account-responsible-gambling.png) | ![Security](docs/screenshots/account-security.png) ![Sessions](docs/screenshots/account-sessions.png) |
+
+### Admin console (`/admin/**`, ADMIN or AUDITOR role)
+
+| Dashboard                                | Markets                                        | Settlements                                            |
+| ---------------------------------------- | ---------------------------------------------- | ------------------------------------------------------ |
+| ![Dashboard](docs/screenshots/admin.png) | ![Markets](docs/screenshots/admin-markets.png) | ![Settlements](docs/screenshots/admin-settlements.png) |
+
+| Users                                      | Audit log                                  | System health and reconciliation             |
+| ------------------------------------------ | ------------------------------------------ | -------------------------------------------- |
+| ![Users](docs/screenshots/admin-users.png) | ![Audit](docs/screenshots/admin-audit.png) | ![System](docs/screenshots/admin-system.png) |
+
+The **System** page runs the 15 ledger invariants (INV-01..15) live and shows them all passing.
 
 ## Quick start
 
+**Requirements:** Node 22 (see `.nvmrc`), pnpm 9, Docker (for PostgreSQL 16).
+
 ```bash
-# Requirements: Node 22, pnpm, Docker (for PostgreSQL 16)
 pnpm install
-cp .env.example .env          # placeholders only — never commit a real secret
-docker compose up -d db
-pnpm db:migrate
-pnpm demo                     # seeds a browsable market with a partially matched book
-pnpm dev                      # http://localhost:3000
+cp .env.example .env           # placeholders only — never commit a real secret
 ```
 
-Verification:
+**1. Start PostgreSQL.** The repo does not ship a compose file, so run a throwaway container whose
+credentials match `.env.example`:
 
 ```bash
-pnpm verify        # lint, format, typecheck, unit, integration, build
-pnpm verify:full   # + concurrency, security, invariants, E2E, coverage gates
-pnpm reconcile     # recompute all balances from the ledger and assert INV-01..15
+docker run -d --name dota-pg -p 5432:5432 \
+  -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=betting_dev postgres:16-alpine
+```
+
+**2. Migrate and seed.** `db:*` scripts run through `tsx`, which does **not** read `.env`, so export
+the two variables they need first (Next.js itself does read `.env`):
+
+```bash
+# bash / zsh
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/betting_dev MONEY_MODE=SIMULATED
+# PowerShell
+$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/betting_dev"; $env:MONEY_MODE="SIMULATED"
+
+pnpm demo                      # = db:migrate + db:seed
+pnpm dev                       # http://localhost:3000
+```
+
+`pnpm demo` seeds one game, one tournament, 3 matches, 3 open markets with a partially matched book,
+and funded demo users. It is idempotent: a second run is a no-op.
+
+### Trying it out
+
+- **Browse** `/games`, `/matches` and a market at `/markets/<id>` — no account needed.
+- **There is no sign-in page yet**; authentication is exposed as API routes under `/api/v1/auth/*`
+  (register → verify-email → login). In development the verification email lands in the `outbox`
+  table instead of being sent; `tests/e2e/auth.spec.ts` shows the full flow end to end.
+- **Funding a wallet:** `POST /api/v1/wallet/simulated-credit` (needs the session cookie, an
+  `Idempotency-Key` header, and the CSRF double-submit: `x-csrf-token` equal to the `csrf_token`
+  cookie plus a matching `Origin`).
+- **Admin access:** grant a role directly in the database, e.g.
+  `INSERT INTO user_roles (user_id, role) VALUES ('<user-uuid>', 'ADMIN');`
+- Seeded markets close shortly after seeding. If bets are rejected with a `409`, re-seed or push the
+  close time forward: `UPDATE markets SET closes_at = now() + interval '7 days';`
+
+## Commands
+
+| Command                                                             | Purpose                                                          |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `pnpm dev` / `build` / `start`                                      | Next.js dev server, production build, production server          |
+| `pnpm demo`                                                         | Migrate and seed a browsable demo database                       |
+| `pnpm db:migrate` / `db:seed`                                       | Apply migrations / seed dev data                                 |
+| `pnpm db:generate`                                                  | Generate a Drizzle migration from schema changes                 |
+| `pnpm db:check-drift` / `db:audit-grants`                           | Fail on schema drift / audit DB role grants                      |
+| `pnpm reconcile`                                                    | Recompute all balances from the ledger and assert INV-01..15     |
+| `pnpm lint` / `format` / `typecheck`                                | ESLint (zero warnings), Prettier, `tsc --noEmit`                 |
+| `pnpm depcruise` / `knip`                                           | Architecture boundaries / dead-code detection                    |
+| `pnpm test`                                                         | All Vitest suites                                                |
+| `pnpm test:unit` / `integration`                                    | Unit tests / tests against a real PostgreSQL                     |
+| `pnpm test:concurrency` / `db` / `security` / `invariants` / `perf` | Targeted suites                                                  |
+| `pnpm test:e2e`                                                     | Playwright (builds and serves over self-signed HTTPS)            |
+| `pnpm test:mutation`                                                | Stryker mutation testing on the financial core                   |
+| `pnpm test:manifest`                                                | Fail if any of the 32 mandatory scenarios is missing             |
+| `pnpm verify`                                                       | Format, lint, typecheck, depcruise, knip, tests, manifest, build |
+| `pnpm verify:full`                                                  | `verify` + E2E                                                   |
+
+Integration, database and concurrency tests need a reachable PostgreSQL via `DATABASE_URL`.
+
+## Project layout
+
+```
+src/app/         Next.js routes: (public), (account), (admin), api/v1
+src/application/ use cases        src/domain/  pure domain + ports
+src/infra/       Postgres/Drizzle, ledger, crypto, clock
+src/platform/    config, authz, CSRF, HTTP helpers
+src/ui/          React components
+db/              migrations and seed        tests/  integration, concurrency, e2e, ...
+scripts/         migrations, reconciliation, coverage tooling
 ```
 
 ## Architecture at a glance
