@@ -273,9 +273,15 @@ export class GlassHeadlineEngine {
    * page's title frozen on screen.
    */
   private clearMask(gl: WebGL2RenderingContext): void {
-    if (this.builtKey === "") return;
+    if (!this.blurB) {
+      // First load on a route with no headline: draw() needs a height-field to sample, and only
+      // blurMask() ever creates one, so without this the background would never render here.
+      this.blurA = createTarget(gl, 1, 1, true, this.floatTargets);
+      this.blurB = createTarget(gl, 1, 1, true, this.floatTargets);
+    } else if (this.builtKey === "") {
+      return;
+    }
     this.builtKey = "";
-    if (!this.blurB) return;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.blurB.fbo);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
