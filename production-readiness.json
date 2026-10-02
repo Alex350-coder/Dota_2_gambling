@@ -1,0 +1,161 @@
+{
+  "$comment": "Claude/compliance/COMPLIANCE.md §4 — Production Readiness Gate register (T-1009). Every gate below is recorded as unmet by design: this is a portfolio engineering MVP running exclusively on simulated money. MONEY_MODE=REAL is rejected at boot (RULE-K01) unless every gate here is satisfied:true with evidence and an approver — no feature flag alone can flip this file's effect. This file must never be edited to fabricate a satisfied gate; each satisfied:true requires the evidence artefact named in COMPLIANCE.md §4 to actually exist and be reviewed by the named approver.",
+  "generatedAt": "2026-09-27",
+  "moneyMode": "SIMULATED",
+  "gates": [
+    {
+      "id": "G-01",
+      "requirement": "Legal opinion from a qualified Peruvian lawyer covering §2 open questions",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-02",
+      "requirement": "MINCETUR authorisation obtained for the applicable activity, in force",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-03",
+      "requirement": "Corporate vehicle, capital and solvency requirements met; guarantee/bond lodged",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-04",
+      "requirement": "Technical standards compliance (platform standards I-III) and certification/audit as required",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-05",
+      "requirement": "MINCETUR Data Center reporting (standard IV) implemented and tested",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-06",
+      "requirement": "Tax registration and calculation/withholding implemented per SUNAT/MINCETUR determination",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-07",
+      "requirement": "Payment provider(s) contractually and legally permitted for this activity; written confirmation obtained",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-08",
+      "requirement": "KYC: identity verification (DNI/CE) at registration and before withdrawal",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-09",
+      "requirement": "AML/CFT programme: risk assessment, monitoring rules, suspicious-activity reporting, compliance officer",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-10",
+      "requirement": "Age verification beyond self-declaration",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-11",
+      "requirement": "Responsible gambling controls live and enforced",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-12",
+      "requirement": "Data protection: Ley 29733 compliance, privacy notice, retention, DSAR process, cross-border assessment",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-13",
+      "requirement": "Financial reconciliation: daily provider-vs-ledger reconciliation with zero unexplained drift for 30 consecutive days",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-14",
+      "requirement": "Independent security review / penetration test with all Critical and High findings remediated",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-15",
+      "requirement": "Infrastructure hardening: network isolation, secret management, least-privilege IAM, encrypted backups",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-16",
+      "requirement": "Observability & alerting live for financial and security anomalies with defined on-call",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-17",
+      "requirement": "Backup and restore validated, MET-DR-01..04 met in a rehearsal",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-18",
+      "requirement": "Auditability: audit log completeness verified; independent auditor role provisioned",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-19",
+      "requirement": "Legal pages finalised and reviewed by counsel",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-20",
+      "requirement": "Dispute resolution and complaints process operational, including consumer-protection requirements",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-21",
+      "requirement": "Insider-risk controls: 4-eyes on results and settlement, segregation of duties, admins barred from betting",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    },
+    {
+      "id": "G-22",
+      "requirement": "Written owner approval to operate with real money",
+      "satisfied": false,
+      "evidence": null,
+      "approver": null
+    }
+  ]
+}

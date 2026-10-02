@@ -15,7 +15,6 @@
 secrets/
 credentials.json
 service-account*.json
-production-readiness.json
 
 # --- Data that must never be committed -----------------------------------
 *.sql.gz
