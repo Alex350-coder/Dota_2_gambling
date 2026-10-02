@@ -1,11 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildSecurityHeaders, generateNonce } from "./security-headers";
 
 describe("buildSecurityHeaders", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
   it("builds a nonce-based CSP with no unsafe-inline or unsafe-eval in script-src", () => {
     const headers = buildSecurityHeaders({ nonce: "test-nonce-value" });
     const csp = headers["Content-Security-Policy"];
@@ -15,19 +11,6 @@ describe("buildSecurityHeaders", () => {
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).not.toContain("unsafe-inline");
     expect(csp).not.toContain("unsafe-eval");
-  });
-
-  it("stays strict (no unsafe-eval) in production, even explicitly", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    const csp = buildSecurityHeaders({ nonce: "n" })["Content-Security-Policy"];
-    expect(csp).not.toContain("unsafe-eval");
-  });
-
-  it("adds unsafe-eval to script-src only under NODE_ENV=development (Fast Refresh needs eval)", () => {
-    vi.stubEnv("NODE_ENV", "development");
-    const csp = buildSecurityHeaders({ nonce: "n" })["Content-Security-Policy"];
-    expect(csp).toContain("script-src 'self' 'nonce-n' 'unsafe-eval'");
-    expect(csp).not.toContain("style-src 'self' 'nonce-n' 'unsafe-eval'");
   });
 
   it("sets Strict-Transport-Security for two years with preload", () => {

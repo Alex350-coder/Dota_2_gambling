@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getContainer } from "@/platform/http/container";
 import { MarketStatusBadge } from "@/ui/catalog/MarketStatusBadge";
 import { EmptyState } from "@/ui/layout/EmptyState";
-import { Hero } from "@/ui/home/Hero";
 
 const HOME_PAGE_LIMIT = 5;
 
@@ -23,7 +22,19 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <Hero />
+      <section>
+        <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+          Peer-to-peer esports betting, simulated money only
+        </h1>
+        <p className="mt-2 max-w-2xl text-[var(--text-secondary)]">
+          Fixed 1.8x odds, streamer-hosted markets, no house edge. Every amount on this site is
+          simulated — see{" "}
+          <Link href="/how-it-works" className="underline hover:text-[var(--text-primary)]">
+            how it works
+          </Link>
+          .
+        </p>
+      </section>
 
       <HomeSection title="Markets" viewAllHref="/matches" emptyLabel="No markets yet.">
         {markets.items.map((market) => (

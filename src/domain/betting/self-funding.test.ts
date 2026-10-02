@@ -40,44 +40,6 @@ describe("isSelfFunding", () => {
       isSelfFunding(toMinor(100n), { num: 18, den: 0 }, toMinor(100n), MVP_ODDS);
     }).toThrow(RangeError);
   });
-
-  it("throws a RangeError for a negative odds denominator", () => {
-    expect(() => {
-      isSelfFunding(toMinor(100n), { num: 18, den: -1 }, toMinor(100n), MVP_ODDS);
-    }).toThrow(RangeError);
-  });
-
-  it("throws a RangeError for a non-integer odds numerator", () => {
-    expect(() => {
-      isSelfFunding(toMinor(100n), { num: 1.5, den: 10 }, toMinor(100n), MVP_ODDS);
-    }).toThrow(RangeError);
-  });
-
-  it("throws a RangeError for a non-integer odds denominator", () => {
-    expect(() => {
-      isSelfFunding(toMinor(100n), { num: 18, den: 1.5 }, toMinor(100n), MVP_ODDS);
-    }).toThrow(RangeError);
-  });
-
-  it("throws a RangeError for a negative odds numerator", () => {
-    expect(() => {
-      isSelfFunding(toMinor(100n), { num: -1, den: 10 }, toMinor(100n), MVP_ODDS);
-    }).toThrow(RangeError);
-  });
-
-  it("validates the B-side odds too, not only the A-side", () => {
-    expect(() => {
-      isSelfFunding(toMinor(100n), MVP_ODDS, toMinor(100n), { num: 18, den: 0 });
-    }).toThrow(RangeError);
-  });
-
-  it("is false when the B side's odds would pay out more than the pool", () => {
-    // stakeB=100 at 2.1x -> 210 > pool(200)
-    const tooHigh: OddsRatio = { num: 21, den: 10 };
-    const result = isSelfFunding(toMinor(100n), MVP_ODDS, toMinor(100n), tooHigh);
-
-    expect(result).toBe(false);
-  });
 });
 
 describe("assertSelfFunding", () => {

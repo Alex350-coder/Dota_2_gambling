@@ -18,28 +18,6 @@ export const config = {
 };
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-const NONCE_COOKIE_NAME = "csp_nonce";
-
-/**
- * A nonce is only usable by the exact document the browser enforces CSP for: that CSP comes
- * from the *document* response's headers alone and is fixed for that document's whole lifetime,
- * but Next's App Router re-invokes this middleware for every same-document RSC fetch too (e.g.
- * client-side navigation back to a previously-visited route). Minting a fresh nonce on those
- * produced HTML whose inline <style nonce="..."> no longer matched the nonce the browser was
- * actually enforcing, so the browser silently dropped it - on this app that meant the hero's
- * entire stylesheet (and any other component doing the same) vanished after navigating away and
- * back. `Sec-Fetch-Dest: document` is only set on a real top-level navigation (full page load,
- * link/back/forward triggering a fresh document); every other request reuses the nonce already
- * issued for the current document, read back from this cookie.
- */
-function resolveNonce(request: NextRequest): { nonce: string; isNewDocument: boolean } {
-  const isNewDocument = request.headers.get("sec-fetch-dest") === "document";
-  const existing = request.cookies.get(NONCE_COOKIE_NAME)?.value;
-  if (!isNewDocument && existing) {
-    return { nonce: existing, isNewDocument: false };
-  }
-  return { nonce: generateNonce(), isNewDocument: true };
-}
 
 /**
  * CSRF is only enforced for mutating requests carrying an existing session
@@ -72,20 +50,12 @@ export function middleware(request: NextRequest): NextResponse {
     }
   }
 
-  const { nonce, isNewDocument } = resolveNonce(request);
+  const nonce = generateNonce();
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   applySecurityHeaders(response, nonce);
-  if (isNewDocument) {
-    response.cookies.set(NONCE_COOKIE_NAME, nonce, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-      path: "/",
-    });
-  }
   return response;
 }
 
