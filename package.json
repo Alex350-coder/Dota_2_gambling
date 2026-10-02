@@ -40,6 +40,7 @@
     "test:mutation": "stryker run",
     "check:money-format": "tsx scripts/check-money-formatting.ts",
     "check:doc-links": "tsx scripts/check-doc-links.ts",
+    "demo": "pnpm db:migrate && pnpm db:seed",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm test && pnpm test:manifest && pnpm build",
     "verify:full": "pnpm verify && pnpm test:e2e",
     "prepare": "husky"
