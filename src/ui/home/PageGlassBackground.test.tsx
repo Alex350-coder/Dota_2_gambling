@@ -56,4 +56,19 @@ describe("PageGlassBackground", () => {
       unmount();
     }).not.toThrow();
   });
+
+  it("tracks pointermove on a fine pointer and stops on unmount, without throwing", async () => {
+    stubMatchMedia(true);
+    const { PageGlassBackground } = await import("./PageGlassBackground");
+    const { unmount } = render(<PageGlassBackground />);
+
+    expect(() => {
+      window.dispatchEvent(new PointerEvent("pointermove", { clientX: 10, clientY: 10 }));
+    }).not.toThrow();
+
+    unmount();
+    expect(() => {
+      window.dispatchEvent(new PointerEvent("pointermove", { clientX: 20, clientY: 20 }));
+    }).not.toThrow();
+  });
 });
