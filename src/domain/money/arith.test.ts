@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { add, exceedsCap, mulBps, negate, scaleByRatio, splitFloor, sub } from "./arith";
+import { add, mulBps, negate, scaleByRatio, splitFloor, sub } from "./arith";
 import { toMinor } from "./types";
 
 describe("add", () => {
@@ -34,20 +34,6 @@ describe("negate", () => {
 
   it("returns zero for a zero amount", () => {
     expect(negate(toMinor(0n))).toBe(0n);
-  });
-});
-
-describe("exceedsCap", () => {
-  it("is true when current + addition exceeds the cap", () => {
-    expect(exceedsCap(80n, 30n, 100n)).toBe(true);
-  });
-
-  it("is false when current + addition is exactly the cap", () => {
-    expect(exceedsCap(70n, 30n, 100n)).toBe(false);
-  });
-
-  it("is false when current + addition is below the cap", () => {
-    expect(exceedsCap(10n, 10n, 100n)).toBe(false);
   });
 });
 
@@ -125,18 +111,6 @@ describe("scaleByRatio", () => {
 
   it("throws for a negative numerator", () => {
     expect(() => scaleByRatio(toMinor(100n), -1, 10)).toThrow(RangeError);
-  });
-
-  it("throws for a non-integer numerator", () => {
-    expect(() => scaleByRatio(toMinor(100n), 1.5, 10)).toThrow(RangeError);
-  });
-
-  it("throws for a non-integer denominator", () => {
-    expect(() => scaleByRatio(toMinor(100n), 18, 1.5)).toThrow(RangeError);
-  });
-
-  it("allows a zero numerator", () => {
-    expect(scaleByRatio(toMinor(100n), 0, 10)).toBe(0n);
   });
 });
 

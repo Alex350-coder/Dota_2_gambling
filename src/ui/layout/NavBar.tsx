@@ -11,7 +11,7 @@ const NAV_LINKS: readonly { href: string; label: string }[] = [
 
 export function NavBar() {
   return (
-    <header className="border-b border-[var(--border-default)] bg-[var(--surface-1)]/70 backdrop-blur-md">
+    <header className="border-b border-[var(--border-default)] bg-[var(--surface-1)]">
       <nav
         aria-label="Primary"
         className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3"

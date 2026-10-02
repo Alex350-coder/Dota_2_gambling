@@ -1,12 +1,11 @@
 import { z } from "zod";
-import { allGatesSatisfied, readProductionReadinessGates } from "./production-readiness";
 
 const booleanFromString = z.enum(["true", "false"]).transform((value) => value === "true");
 
 /**
- * RULE-K01 (Claude/Rules.md): MONEY_MODE must default to SIMULATED. REAL is rejected unless
- * every gate in production-readiness.json (T-1009, Claude/compliance/COMPLIANCE.md §4) is
- * satisfied:true — see ./production-readiness.ts for the read/check logic.
+ * RULE-K01 (Claude/Rules.md): MONEY_MODE must default to SIMULATED. REAL is
+ * rejected here unconditionally until the Production Readiness Gate (T-1009,
+ * Claude/compliance/COMPLIANCE.md §4) is implemented and wired into this schema.
  */
 const baseEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -51,22 +50,16 @@ const baseEnvSchema = z.object({
   METRICS_TOKEN: z.string().min(1),
 });
 
-function moneyModeAllowed(moneyMode: "SIMULATED" | "REAL"): boolean {
-  if (moneyMode === "SIMULATED") return true;
-  return allGatesSatisfied(readProductionReadinessGates());
-}
-
 function rejectRealMoneyMode(): { message: string; path: string[] } {
   return {
     message:
-      "MONEY_MODE=REAL is rejected: production-readiness.json does not exist, is malformed, " +
-      "or has an unmet gate (Claude/compliance/COMPLIANCE.md §4, T-1009)",
+      "MONEY_MODE=REAL is rejected: the Production Readiness Gate (T-1009) is not implemented yet",
     path: ["MONEY_MODE"],
   };
 }
 
 export const envSchema = baseEnvSchema.refine(
-  (config) => moneyModeAllowed(config.MONEY_MODE),
+  (config) => config.MONEY_MODE === "SIMULATED",
   rejectRealMoneyMode(),
 );
 
@@ -88,6 +81,6 @@ export const toolingEnvSchema = baseEnvSchema
     DATABASE_STATEMENT_TIMEOUT_MS: true,
     DATABASE_LOCK_TIMEOUT_MS: true,
   })
-  .refine((config) => moneyModeAllowed(config.MONEY_MODE), rejectRealMoneyMode());
+  .refine((config) => config.MONEY_MODE === "SIMULATED", rejectRealMoneyMode());
 
 export type ToolingConfig = z.infer<typeof toolingEnvSchema>;
